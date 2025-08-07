@@ -322,6 +322,7 @@
         const DOT_COLOR = '#FFFFFF'; // White
         const POWER_PELLET_COLOR = '#FFFF00'; // Yellow
         const FRIGHTENED_GHOST_COLOR = '#0000FF'; // Blue
+        const BLINKY_SPAWN_COLOR = '#FFFF00'; // Yellow for Blinky's individual spawn point
 
         // Wall colors for each level
         const MAZE_WALL_COLORS = [
@@ -514,7 +515,7 @@
             { startRow: 10, endRow: 13, startCol: 11, endCol: 15 }, // Maze 4 (Ms. Pac-Man Maze 4)
             { startRow: 10, endRow: 13, startCol: 11, endCol: 15 }, // Maze 5 (Unique Diagnostic)
             { startRow: 13, endRow: 16, startCol: 11, endCol: 15 }, // Maze 6 (Experimental Map 1-2)
-            { startRow: 12, endRow: 16, startCol: 11, endCol: 15 }  // Maze 7 (Experimental Map 1-3 - NEW BOUNDING BOX)
+            { startRow: 12, endRow: 15, startCol: 10, endCol: 17 }  // Maze 7 (Experimental Map 1-3 - UPDATED BOUNDARIES)
         ];
 
         // --- Maze Data ---
@@ -657,7 +658,7 @@
                 [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // Row 4 (Open Path)
                 [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1], // Row 5 (Open Path)
                 [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // Row 6 (Open Path)
-                [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1], // Row 7 (Open Path)
+                [1,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 7 (Open Path)
                 [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 8 (New wall above Blinky)
                 [1,1,1,1,1,1,2,1,1,1,1,1,1,7,7,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 9: Ghost Door
                 [1,1,1,1,1,1,2,1,1,1,1,1,1,5,5,5,1,1,1,1,1,2,1,1,1,1,1,1], // Row 10: Ghost house interior (top row, spawns)
@@ -1142,12 +1143,16 @@
                         dy: 0,
                         frightened: false,
                         eaten: false,
-                        state: 'inHouse', // NEW: Ghosts start in 'inHouse' state
+                        state: (name === 'blinky') ? 'active' : 'inHouse', // FIXED: Blinky is now active at start
                         // Apply level-specific speeds to ghosts
                         speedChase: currentDifficultyTier.ghostChase,
                         speedFrightened: currentDifficultyTier.ghostFrightened,
                         speedTunnel: currentDifficultyTier.ghostTunnel // THIS LINE IS CRITICAL
                     };
+                    // Give Blinky an initial direction to get him moving
+                    if (name === 'blinky') {
+                        newGhost.dy = -1; // Move him up initially
+                    }
                     ghosts.push(newGhost);
                 }
             }
@@ -1254,8 +1259,10 @@
             if (showGhostHouseDebug) {
                 const currentMazeIndex = LEVEL_PROGRESSION_DATA[level].mazeIndex;
                 const boundingBox = GHOST_HOUSE_BOUNDING_BOXES[currentMazeIndex];
+                const ghostConfig = GHOST_HOUSE_CONFIGS[currentMazeIndex];
 
                 if (boundingBox) {
+                    // Draw the main ghost house box (the walled area)
                     ctx.strokeStyle = 'red';
                     ctx.lineWidth = 3; // Thicker line for visibility
                     // Calculate pixel coordinates from tile coordinates
@@ -1264,6 +1271,15 @@
                     const width = (boundingBox.endCol - boundingBox.startCol + 1) * TILE_SIZE;
                     const height = (boundingBox.endRow - boundingBox.startRow + 1) * TILE_SIZE;
                     ctx.strokeRect(startX, startY, width, height);
+                }
+
+                // Draw a separate box for Blinky's spawn point
+                if (ghostConfig && ghostConfig.blinkyStart) {
+                    const blinkyX = ghostConfig.blinkyStart.col * TILE_SIZE;
+                    const blinkyY = ghostConfig.blinkyStart.row * TILE_SIZE;
+                    ctx.strokeStyle = BLINKY_SPAWN_COLOR;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(blinkyX, blinkyY, TILE_SIZE, TILE_SIZE);
                 }
             }
         }
@@ -1563,17 +1579,21 @@
                     } else if (ghost.state === 'exiting') {
                         currentGhostSpeed = ghost.speedTunnel;
                         const doorTile = currentGhostHouseConfig.doorTiles[0]; // Use the first door tile as target
-                        const targetX = doorTile.col * TILE_SIZE + TILE_SIZE / 2;
-                        const targetY = doorTile.row * TILE_SIZE + TILE_SIZE / 2;
-                        const distanceToDoor = Math.sqrt(Math.pow(targetX - ghost.x, 2) + Math.pow(targetY - ghost.y, 2));
+                        // NEW FIX: The exit path is now a two-tile journey
+                        const exitPathTargetRow = doorTile.row - 1; // Tile above the door
+                        const exitPathTargetCol = doorTile.col;
+                        const targetX = exitPathTargetCol * TILE_SIZE + TILE_SIZE / 2;
+                        const targetY = exitPathTargetRow * TILE_SIZE + TILE_SIZE / 2;
 
-                        // If close enough to the door, force them out
-                        if (distanceToDoor < currentGhostSpeed * 2) { // Allow passing through door
-                            ghost.x = targetX; // Snap to door center
+                        const distanceToDoorExit = Math.sqrt(Math.pow(targetX - ghost.x, 2) + Math.pow(targetY - ghost.y, 2));
+                        
+                        if (distanceToDoorExit < currentGhostSpeed) {
+                             // Snap to the exit tile and change to active state
+                            ghost.x = targetX;
                             ghost.y = targetY;
                             ghost.dx = 0;
-                            ghost.dy = -1; // Move upwards out of the door
-                            ghost.state = 'active'; // Transition to active once through door
+                            ghost.dy = 0;
+                            ghost.state = 'active';
                         } else {
                             const angle = Math.atan2(targetY - ghost.y, targetX - ghost.x);
                             ghost.dx = Math.cos(angle);
@@ -1590,73 +1610,78 @@
                                 currentGhostSpeed = ghost.speedChase;
                             }
                         }
-                        // Normal AI (chase/scatter/random)
-                        const possibleMoves = [];
-                        const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}]; // Order: Up, Down, Left, Right
+                        // NEW FIX: Recalculate direction if current direction is blocked
+                        const isCurrentDirectionBlocked = checkWallCollision(ghost.x, ghost.y, ghost.dx * currentGhostSpeed, ghost.dy * currentGhostSpeed, GHOST_RADIUS);
+                        const atIntersection = Math.abs(ghost.x - getTileCenter(currentTile.row, currentTile.col).x) < 2 && Math.abs(ghost.y - getTileCenter(currentTile.row, currentTile.col).y) < 2;
 
-                        for (const dir of directions) {
-                            const nextGhostX = ghost.x + dir.dx * currentGhostSpeed;
-                            const nextGhostY = ghost.y + dir.dy * currentGhostSpeed;
-                            const nextTile = getTileAtPixel(nextGhostX, nextGhostY);
+                        if (isCurrentDirectionBlocked || atIntersection) {
+                            const possibleMoves = [];
+                            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}]; // Order: Up, Down, Left, Right
 
-                            // Ghosts cannot enter ghost door from outside, but can exit
-                            const isNextTileDoor = (nextTile && nextTile.value === 7);
-                            const isCurrentTileInsideGhostHouse = (currentTile && (currentTile.value === 4 || currentTile.value === 5));
+                            for (const dir of directions) {
+                                const nextGhostX = ghost.x + dir.dx * currentGhostSpeed;
+                                const nextGhostY = ghost.y + dir.dy * currentGhostSpeed;
+                                const nextTile = getTileAtPixel(nextGhostX, nextGhostY);
 
-                            if (isNextTileDoor && !isCurrentTileInsideGhostHouse) {
-                                continue; // Cannot enter ghost house through door from outside
-                            }
-                            
-                            if (!nextTile || nextTile.value === 1) { // Solid wall
-                                continue;
-                            }
+                                // Ghosts cannot enter ghost door from outside, but can exit
+                                const isNextTileDoor = (nextTile && nextTile.value === 7);
+                                const isCurrentTileInsideGhostHouse = (currentTile && (currentTile.value === 4 || currentTile.value === 5));
 
-                            // Prevent immediate reversal unless it's the only option
-                            if (dir.dx === -ghost.dx && dir.dy === -ghost.dy && possibleMoves.length > 0) {
-                                continue;
-                            }
-                            possibleMoves.push(dir);
-                        }
-                        // Ghost AI (chase, scatter, or random for frightened)
-                        if (ghost.frightened) {
-                            if (possibleMoves.length > 0) {
-                                const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-                                ghost.dx = chosenMove.dx;
-                                ghost.dy = chosenMove.dy;
-                            } else { // Fallback if somehow stuck
-                                ghost.dx *= -1;
-                                ghost.dy *= -1;
-                            }
-                        } else { // Normal chase AI
-                            const targetX = pacman.x;
-                            const targetY = pacman.y;
-
-                            if (possibleMoves.length > 0) {
-                                let bestMove = possibleMoves[0];
-                                let minDistance = Infinity;
-
-                                for (const move of possibleMoves) {
-                                    const nextGhostX = ghost.x + move.dx * currentGhostSpeed;
-                                    const nextGhostY = ghost.y + move.dy * currentGhostSpeed;
-                                    const distance = Math.sqrt(Math.pow(targetX - nextGhostX, 2) + Math.pow(targetY - ghost.y, 2));
-                                    if (distance < minDistance) {
-                                        minDistance = distance;
-                                        bestMove = move;
-                                    }
+                                if (isNextTileDoor && !isCurrentTileInsideGhostHouse) {
+                                    continue; // Cannot enter ghost house through door from outside
                                 }
-                                ghost.dx = bestMove.dx;
-                                ghost.dy = bestMove.dy;
-                            } else {
-                                // If no valid moves (e.g., trapped or only reverse is valid after filtering)
-                                const reverseDx = -ghost.dx;
-                                const reverseDy = -ghost.dy;
-                                const reverseNextTile = getTileAtPixel(ghost.x + reverseDx * currentGhostSpeed, ghost.y + reverseDy * currentGhostSpeed);
-                                if (reverseNextTile && reverseNextTile.value !== 1 && reverseNextTile.value !== 7) {
-                                    ghost.dx = reverseDx;
-                                    ghost.dy = reverseDy;
+                                
+                                if (!nextTile || nextTile.value === 1) { // Solid wall
+                                    continue;
+                                }
+
+                                // Prevent immediate reversal unless it's the only option
+                                if (dir.dx === -ghost.dx && dir.dy === -ghost.dy && possibleMoves.length > 0) {
+                                    continue;
+                                }
+                                possibleMoves.push(dir);
+                            }
+                            // Ghost AI (chase, scatter, or random for frightened)
+                            if (ghost.frightened) {
+                                if (possibleMoves.length > 0) {
+                                    const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                                    ghost.dx = chosenMove.dx;
+                                    ghost.dy = chosenMove.dy;
+                                } else { // Fallback if somehow stuck
+                                    ghost.dx *= -1;
+                                    ghost.dy *= -1;
+                                }
+                            } else { // Normal chase AI
+                                const targetX = pacman.x;
+                                const targetY = pacman.y;
+
+                                if (possibleMoves.length > 0) {
+                                    let bestMove = possibleMoves[0];
+                                    let minDistance = Infinity;
+
+                                    for (const move of possibleMoves) {
+                                        const nextGhostX = ghost.x + move.dx * currentGhostSpeed;
+                                        const nextGhostY = ghost.y + move.dy * currentGhostSpeed;
+                                        const distance = Math.sqrt(Math.pow(targetX - nextGhostX, 2) + Math.pow(targetY - nextGhostY, 2)); // Corrected distance calculation
+                                        if (distance < minDistance) {
+                                            minDistance = distance;
+                                            bestMove = move;
+                                        }
+                                    }
+                                    ghost.dx = bestMove.dx;
+                                    ghost.dy = bestMove.dy;
                                 } else {
-                                    ghost.dx = 0;
-                                    ghost.dy = 0;
+                                    // If no valid moves (e.g., trapped or only reverse is valid after filtering)
+                                    const reverseDx = -ghost.dx;
+                                    const reverseDy = -ghost.dy;
+                                    const reverseNextTile = getTileAtPixel(ghost.x + reverseDx * currentGhostSpeed, ghost.y + reverseDy * currentGhostSpeed);
+                                    if (reverseNextTile && reverseNextTile.value !== 1 && reverseNextTile.value !== 7) {
+                                        ghost.dx = reverseDx;
+                                        ghost.dy = reverseDy;
+                                    } else {
+                                        ghost.dx = 0;
+                                        ghost.dy = 0;
+                                    }
                                 }
                             }
                         }
@@ -1746,7 +1771,11 @@
                 ghost.dy = 0;
                 ghost.frightened = false;
                 ghost.eaten = false;
-                ghost.state = 'inHouse'; // Reset ghost state to inHouse on reset
+                ghost.state = (ghost.name === 'blinky') ? 'active' : 'inHouse'; // Correctly reset Blinky to active
+                if (ghost.name === 'blinky') {
+                    // Give Blinky an initial direction away from the house
+                    ghost.dy = -1;
+                }
                 ghost.speedChase = currentDifficultyTier.ghostChase;
                 ghost.speedFrightened = currentDifficultyTier.ghostFrightened;
                 ghost.speedTunnel = currentDifficultyTier.ghostTunnel;
@@ -1916,7 +1945,7 @@
                 // Update game state
                 movePacman();
                 eatDots();
-                moveGhosts();
+moveGhosts();
                 checkGhostCollisions();
 
                 // Pac-Man mouth animation: Cycle through states if moving
