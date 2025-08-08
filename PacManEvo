@@ -12,7 +12,7 @@
             background-color: #1a202c; /* Dark background for contrast */
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: center;6
             min-height: 100vh;
             margin: 0;
             overflow: hidden; /* Prevent scrollbars */
@@ -310,531 +310,209 @@
 
     <script>
         // --- Game Configuration ---
-        const TILE_SIZE = 30; // Increased size of each tile in pixels for better visibility
-        const PACMAN_RADIUS = TILE_SIZE / 2 - 1; // Changed from -2 to -1 to make radius 14 (even)
+        const TILE_SIZE = 30;
+        const PACMAN_RADIUS = TILE_SIZE / 2 - 1;
         const GHOST_RADIUS = TILE_SIZE / 2 - 2;
         const DOT_RADIUS = 2;
         const POWER_PELLET_RADIUS = 5;
 
         // Colors
-        const PATH_COLOR = '#000000'; // Black (used for mouth opening)
-        const GHOST_PATH_COLOR_BUILD_MODE = '#333333'; // Dark grey for ghost path in build mode
-        const DOT_COLOR = '#FFFFFF'; // White
-        const POWER_PELLET_COLOR = '#FFFF00'; // Yellow
-        const FRIGHTENED_GHOST_COLOR = '#0000FF'; // Blue
-        const BLINKY_SPAWN_COLOR = '#FFFF00'; // Yellow for Blinky's individual spawn point
+        const PATH_COLOR = '#000000';
+        const GHOST_PATH_COLOR_BUILD_MODE = '#333333';
+        const DOT_COLOR = '#FFFFFF';
+        const POWER_PELLET_COLOR = '#FFFF00';
+        const FRIGHTENED_GHOST_COLOR = '#0000FF';
+        const BLINKY_SPAWN_COLOR = '#FFFF00';
 
         // Wall colors for each level
         const MAZE_WALL_COLORS = [
-            '#0000FF', // Level 1: Blue (Classic Pac-Man)
-            '#FFB6C1', // Level 2: Light Pink (Ms. Pac-Man Maze 1 - for clear differentiation)
-            '#00FFFF', // Level 3: Cyan (Ms. Pac-Man Maze 2)
-            '#A52A2A', // Level 4: Brown (Ms. Pac-Man Maze 3)
-            '#4169E1', // Level 5: Royal Blue (Ms. Pac-Man Maze 4)
-            '#800080', // Level 6: Purple (Unique Diagnostic Maze)
-            '#FF00FF', // Level 7: Magenta (Experimental Map 1-2)
-            '#00FF00'  // Level 8: Green (Experimental Map 1-3)
+            '#0000FF', // Level 1: Blue
+            '#00FF00'  // Level 2: Green
         ];
 
         // Ghost colors
         const GHOST_COLORS = {
-            'blinky': '#FF0000', // Red
-            'pinky': '#FFC0CB', // Pink
-            'inky': '#00FFFF',  // Cyan
-            'clyde': '#FFA500'  // Orange
+            'blinky': '#FF0000',
+            'pinky': '#FFC0CB',
+            'inky': '#00FFFF',
+            'clyde': '#FFA500'
         };
 
-        // Power Pellet flashing interval (original: 200ms)
         const POWER_PELLET_FLASH_INTERVAL = 200;
-        const CURSOR_FLASH_INTERVAL = 200; // For build mode cursor
-        const CURSOR_FEEDBACK_DURATION = 100; // How long the green flash lasts
+        const CURSOR_FLASH_INTERVAL = 200;
+        const CURSOR_FEEDBACK_DURATION = 100;
 
-        // Base speed unit in pixels per frame
         const BASE_PIXEL_SPEED = 2;
 
-        // Difficulty configurations for different level tiers
+        // Difficulty configurations
         const DIFFICULTY_TIERS = [
-            // Tier 0: Level 1 (Classic Pac-Man speeds and frightened duration)
             {
-                pacmanNormal: 0.8 * BASE_PIXEL_SPEED, // 80% of max speed
-                pacmanFrightened: 0.9 * BASE_PIXEL_SPEED, // 90% of max speed
-                ghostChase: 0.75 * BASE_PIXEL_SPEED, // 75% of max speed
-                ghostFrightened: 0.5 * BASE_PIXEL_SPEED, // 50% of max speed
-                ghostTunnel: 0.4 * BASE_PIXEL_SPEED, // 40% of max speed (not fully used yet)
-                frightenedDurationMs: 8000 // 8 seconds
-            },
-            // Tier 1: Levels 2-5 (Ms. Pac-Man, slightly faster, shorter frightened)
-            {
-                pacmanNormal: 0.9 * BASE_PIXEL_SPEED, // 90% of max speed
-                pacmanFrightened: 1.0 * BASE_PIXEL_SPEED, // 100% of max speed (Ms. Pac-Man gets faster when frightened)
-                ghostChase: 0.85 * BASE_PIXEL_SPEED, // 85% of max speed
-                ghostFrightened: 0.55 * BASE_PIXEL_SPEED, // 55% of max speed
-                ghostTunnel: 0.45 * BASE_PIXEL_SPEED, // 45% of max speed
-                frightenedDurationMs: 6000 // 6 seconds
-            },
-            // Tier 2: Levels 6+ (Ms. Pac-Man, even faster, even shorter frightened)
-            {
-                pacmanNormal: 1.0 * BASE_PIXEL_SPEED, // 100% of max speed
-                pacmanFrightened: 1.0 * BASE_PIXEL_SPEED, // 100% of max speed
-                ghostChase: 0.95 * BASE_PIXEL_SPEED, // 95% of max speed
-                ghostFrightened: 0.6 * BASE_PIXEL_SPEED, // 60% of max speed
-                ghostTunnel: 0.5 * BASE_PIXEL_SPEED, // 50% of max speed
-                frightenedDurationMs: 4000 // 4 seconds
+                pacmanNormal: 0.8 * BASE_PIXEL_SPEED,
+                pacmanFrightened: 0.9 * BASE_PIXEL_SPEED,
+                ghostChase: 0.75 * BASE_PIXEL_SPEED,
+                ghostFrightened: 0.5 * BASE_PIXEL_SPEED,
+                ghostTunnel: 0.4 * BASE_PIXEL_SPEED,
+                frightenedDurationMs: 8000
             }
         ];
 
         // Character configurations
         const CHARACTER_CONFIGS = {
             PACMAN: {
-                mouthAnimationFrames: [2, 0], // Fully open, closed
-                chompInterval: 75, // Milliseconds per mouth frame (approx. 150ms for a full chomp cycle)
-                initialMouthState: 0, // Starts closed
-                color: '#FFFF00', // Yellow
-                deathAnimationType: 'disappear' // For future death animation implementation
-            },
-            MS_PACMAN: {
-                mouthAnimationFrames: [2, 1, 0, 1], // Current 4-frame cycle for smoother animation
-                chompInterval: 100, // Milliseconds per mouth frame (400ms for full cycle)
-                initialMouthState: 2, // Starts open (as per research)
-                color: '#FFFF00', // Yellow
-                deathAnimationType: 'spin' // For future death animation implementation
+                mouthAnimationFrames: [2, 0],
+                chompInterval: 75,
+                initialMouthState: 0,
+                color: '#FFFF00',
+                deathAnimationType: 'disappear'
             }
         };
 
-        // Centralized Level Progression Data
-        // Each entry defines the maze, character, difficulty tier, and display name for that level.
         const LEVEL_PROGRESSION_DATA = [
-            { mazeIndex: 0, characterType: 'PACMAN', difficultyTierIndex: 0, displayName: { game: 'Pacman', mapNumber: 1, iteration: 1 } }, // Level 1
-            { mazeIndex: 1, characterType: 'MS_PACMAN', difficultyTierIndex: 1, displayName: { game: 'Ms. Pacman', mapNumber: 1, iteration: 1 } }, // Level 2
-            { mazeIndex: 2, characterType: 'MS_PACMAN', difficultyTierIndex: 1, displayName: { game: 'Ms. Pacman', mapNumber: 2, iteration: 1 } }, // Level 3
-            { mazeIndex: 3, characterType: 'MS_PACMAN', difficultyTierIndex: 1, displayName: { game: 'Ms. Pacman', mapNumber: 3, iteration: 1 } }, // Level 4
-            { mazeIndex: 4, characterType: 'MS_PACMAN', difficultyTierIndex: 1, displayName: { game: 'Ms. Pacman', mapNumber: 4, iteration: 1 } }, // Level 5
-            { mazeIndex: 5, characterType: 'MS_PACMAN', difficultyTierIndex: 2, displayName: { game: 'Experimental', mapNumber: 1, iteration: 1 } }, // Level 6 (Diagnostic Maze, faster)
-            { mazeIndex: 1, characterType: 'MS_PACMAN', difficultyTierIndex: 2, displayName: { game: 'Ms. Pacman', mapNumber: 1, iteration: 2 } }, // Level 7 (Ms. Pac-Man Maze 1, faster)
-            { mazeIndex: 2, characterType: 'MS_PACMAN', difficultyTierIndex: 2, displayName: { game: 'Ms. Pacman', mapNumber: 2, iteration: 2 } }, // Level 8 (Ms. Pac-Man Maze 2, faster)
-            { mazeIndex: 3, characterType: 'MS_PACMAN', difficultyTierIndex: 2, displayName: { game: 'Ms. Pacman', mapNumber: 3, iteration: 2 } }, // Level 9 (Ms. Pac-Man Maze 3, faster)
-            { mazeIndex: 4, characterType: 'MS_PACMAN', difficultyTierIndex: 2, displayName: { game: 'Ms. Pacman', mapNumber: 4, iteration: 2 } }, // Level 10 (Ms. Pac-Man Maze 4, faster)
-            // Added Experimental Map 1-2 for testing the block shift
-            { mazeIndex: 6, characterType: 'MS_PACMAN', difficultyTierIndex: 2, displayName: { game: 'Experimental', mapNumber: 1, iteration: 2 } }, // Level 11
-            // Added Experimental Map 1-3 (recreated from image)
-            { mazeIndex: 7, characterType: 'PACMAN', difficultyTierIndex: 0, displayName: { game: 'Experimental', mapNumber: 1, iteration: 3 } } // Level 12
+            { mazeIndex: 0, characterType: 'PACMAN', difficultyTierIndex: 0, displayName: { game: 'Experimental', mapNumber: 1, iteration: 1 } },
+            { mazeIndex: 1, characterType: 'PACMAN', difficultyTierIndex: 0, displayName: { game: 'Experimental', mapNumber: 1, iteration: 2 } }
         ];
 
-        // --- Ghost House Configurations (for each maze) ---
-        // Defines the door coordinates and the starting positions for each ghost within that maze's ghost house.
         const GHOST_HOUSE_CONFIGS = [
-            // Maze 0: Classic Pac-Man Maze
             {
-                doorTiles: [{row: 12, col: 13}, {row: 12, col: 14}],
-                blinkyStart: { row: 11, col: 13 }, // Blinky starts above the door
-                pinkyStart: { row: 13, col: 13 },  // Pinky starts inside the house
-                inkyStart: { row: 13, col: 12 },   // Inky starts inside the house
-                clydeStart: { row: 13, col: 14 },    // Clyde starts inside the house
-                exitPoint: { row: 11, col: 13 }, // Common exit point for ghosts (above door)
-                returnPoint: { row: 14, col: 13 } // Universal return point inside the house
+                doorTiles: [{row: 12, col: 13}, {row: 12, col: 14}], 
+                blinkyStart: { row: 11, col: 13 }, 
+                pinkyStart: { row: 14, col: 13 },  
+                inkyStart: { row: 14, col: 12 },   
+                clydeStart: { row: 14, col: 14 },    
+                exitPoint: { row: 11, col: 13 }, 
+                returnPoint: { row: 14, col: 13 } 
             },
-            // Maze 1: Ms. Pac-Man Maze 1 (Pink Maze)
             {
-                doorTiles: [{row: 11, col: 13}, {row: 11, col: 14}],
-                blinkyStart: { row: 10, col: 13 }, // Blinky starts above the door
-                pinkyStart: { row: 12, col: 13 },
-                inkyStart: { row: 12, col: 12 },
-                clydeStart: { row: 12, col: 14 },
-                exitPoint: { row: 10, col: 13 },
-                returnPoint: { row: 13, col: 13 }
-            },
-            // Maze 2: Ms. Pac-Man Maze 2 (Light Blue)
-            {
-                doorTiles: [{row: 9, col: 13}, {row: 9, col: 14}],
-                blinkyStart: { row: 8, col: 13 }, // Blinky starts above the door
-                pinkyStart: { row: 10, col: 13 },
-                inkyStart: { row: 10, col: 12 },
-                clydeStart: { row: 10, col: 14 },
-                exitPoint: { row: 8, col: 13 },
-                returnPoint: { row: 11, col: 13 }
-            },
-            // Maze 3: Ms. Pac-Man Maze 3 (Brown)
-            {
-                doorTiles: [{row: 10, col: 13}, {row: 10, col: 14}],
-                blinkyStart: { row: 9, col: 13 }, // Blinky starts above the door
-                pinkyStart: { row: 11, col: 13 },
-                inkyStart: { row: 11, col: 12 },
-                clydeStart: { row: 11, col: 14 },
-                exitPoint: { row: 9, col: 13 },
-                returnPoint: { row: 12, col: 13 }
-            },
-            // Maze 4: Ms. Pac-Man Maze 4 (Dark Blue)
-            {
-                doorTiles: [{row: 10, col: 13}, {row: 10, col: 14}],
-                blinkyStart: { row: 9, col: 13 }, // Blinky starts above the door
-                pinkyStart: { row: 11, col: 13 },
-                inkyStart: { row: 11, col: 12 },
-                clydeStart: { row: 11, col: 14 },
-                exitPoint: { row: 9, col: 13 },
-                returnPoint: { row: 12, col: 13 }
-            },
-            // Maze 5: Unique Diagnostic Maze (Experimental)
-            {
-                doorTiles: [{row: 10, col: 13}, {row: 10, col: 14}],
-                blinkyStart: { row: 9, col: 13 }, // Blinky starts above the door
-                pinkyStart: { row: 11, col: 13 },
-                inkyStart: { row: 11, col: 12 },
-                clydeStart: { row: 11, col: 14 },
-                exitPoint: { row: 9, col: 13 },
-                returnPoint: { row: 12, col: 13 }
-            },
-            // Maze 6: Experimental Map 1-2 (Copy of Pacman Map 1 with block shift applied)
-            {
-                doorTiles: [{row: 13, col: 13}, {row: 13, col: 14}],
-                blinkyStart: { row: 12, col: 13 }, // Blinky starts above the door
-                pinkyStart: { row: 14, col: 13 },
-                inkyStart: { row: 14, col: 12 },
-                clydeStart: { row: 14, col: 14 },
-                exitPoint: { row: 12, col: 13 },
-                returnPoint: { row: 15, col: 13 }
-            },
-            // Maze 7: Experimental Map 1-3 (NEW CONFIGURATION)
-            {
-                doorTiles: [{row: 12, col: 13}, {row: 12, col: 14}], // Determined from new JSON
-                blinkyStart: { row: 11, col: 13 }, // Just above the door
-                pinkyStart: { row: 14, col: 13 },  // Below the door, center of house
-                inkyStart: { row: 14, col: 12 },   // Left of Pinky
-                clydeStart: { row: 14, col: 14 },    // Right of Pinky
-                exitPoint: { row: 11, col: 13 }, // Common exit point for ghosts (above door)
-                returnPoint: { row: 14, col: 13 } // Universal return point inside the house
+                doorTiles: [{row: 12, col: 13}, {row: 12, col: 14}], 
+                blinkyStart: { row: 11, col: 13 }, 
+                pinkyStart: { row: 14, col: 13 },  
+                inkyStart: { row: 14, col: 12 },   
+                clydeStart: { row: 14, col: 14 },    
+                exitPoint: { row: 11, col: 13 }, 
+                returnPoint: { row: 14, col: 13 } 
             }
         ];
 
-        // NEW: Bounding boxes for Ghost Houses for debug visualization
-        // { startRow, endRow, startCol, endCol } (inclusive) - covers the 3x2 interior + its surrounding walls
         const GHOST_HOUSE_BOUNDING_BOXES = [
-            { startRow: 12, endRow: 15, startCol: 11, endCol: 15 }, // Maze 0 (Classic Pac-Man)
-            { startRow: 11, endRow: 14, startCol: 11, endCol: 15 }, // Maze 1 (Ms. Pac-Man Maze 1)
-            { startRow: 9, endRow: 12, startCol: 11, endCol: 15 }, // Maze 2 (Ms. Pac-Man Maze 2)
-            { startRow: 10, endRow: 13, startCol: 11, endCol: 15 }, // Maze 3 (Ms. Pac-Man Maze 3)
-            { startRow: 10, endRow: 13, startCol: 11, endCol: 15 }, // Maze 4 (Ms. Pac-Man Maze 4)
-            { startRow: 10, endRow: 13, startCol: 11, endCol: 15 }, // Maze 5 (Unique Diagnostic)
-            { startRow: 13, endRow: 16, startCol: 11, endCol: 15 }, // Maze 6 (Experimental Map 1-2)
-            { startRow: 12, endRow: 15, startCol: 10, endCol: 17 }  // Maze 7 (Experimental Map 1-3 - UPDATED BOUNDARIES)
+            { startRow: 12, endRow: 15, startCol: 10, endCol: 17 },
+            { startRow: 12, endRow: 15, startCol: 10, endCol: 17 }
         ];
 
         // --- Maze Data ---
-        // 0: Path, 1: Wall, 2: Dot, 3: Power Pellet, 4: Ghost House Path, 5: Ghost Start (used for initial placement), 6: Pac-Man Start, 7: Ghost Door
-        // This array should have 8 mazes (indices 0-7).
-        const MAZES = [
-            // Maze 0: Classic Pac-Man Maze (index 0) - UPDATED for 3x2 ghost house
+        const tileSymbols = {
+          ' ': 0, '#': 1, '.': 2, 'o': 3, '~': 4, '^': 5, '@': 6, '=': 7
+        };
+        
+        const MAZE_DATA_STRINGS = [
             [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 0
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 1
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 2
-                [1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1], // Row 3
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 4
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 5
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1], // Row 6
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1], // Row 7
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1], // Row 8
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,0,0,0,1,1,1,1,1,2,1,1,1,1,1,1], // Row 9: Path around Blinky
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,0,0,0,1,1,1,1,1,2,1,1,1,1,1,1], // Row 10: Path around Blinky
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,5,0,0,1,1,1,1,1,2,1,1,1,1,1,1], // Row 11: Blinky's start (5) at 11,13
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,7,7,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 12: Ghost Door (7,7) at 12,13-14
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,5,5,5,1,1,1,1,1,2,1,1,1,1,1,1], // Row 13: Ghost house interior (top row, spawn points)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,4,4,4,1,1,1,1,1,2,1,1,1,1,1,1], // Row 14: Ghost house interior (bottom row, path)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 15: Bottom wall of ghost house
-                [0,0,0,0,0,0,2,0,0,0,1,4,4,4,4,4,4,1,0,0,0,2,0,0,0,0,0,0], // Row 16: Tunnel (unchanged from previous version)
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1],
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,6,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Pac-Man start (6)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]  // Row 30 (Increased from 29 to 30 to accommodate new GH position)
+                "############################",
+                "#............##............#",
+                "#.####.#####.##.#####.####.#",
+                "#o####.#####.##.#####.####o#",
+                "#.####.#####.##.#####.####.#",
+                "#..........................#",
+                "#.####.##.########.##.####.#",
+                "#.####.##.########.##.####.#",
+                "#......##....##....##......#",
+                "######.##### ## #####.######",
+                "######.##### ## #####.######",
+                "######.##~~~ ~~ ~~~##.######",
+                "######.##~###==###~##.######",
+                "######.##~#~~  ~~#~##.######",
+                " ~~~~~.~~~#~~~~~~#~~~.~~~~~ ",
+                "######.##~########~##.######",
+                "######.## ~~~~~~~~ ##.######",
+                "######.## ######## ##.######",
+                "######.## ######## ##.######",
+                "#............##............#",
+                "#.####.#####.##.#####.####.#",
+                "#.####.#####.##.#####.####.#",
+                "#o..##.......  .......##..o#",
+                "###.##.##.########.##.##.###",
+                "###.##.##.########.##.##.###",
+                "#......##....##....##......#",
+                "#.##########.##.##########.#",
+                "#.##########.##.##########.#",
+                "#............@.............#",
+                "############################"
             ],
-            // Maze 1: Ms. Pac-Man Maze 1 (Pink Maze) - UPDATED for 3x2 ghost house
             [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 0
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 1
-                [1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1], // Row 2
-                [1,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,1], // Row 3 (Power pellets)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 4
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 5
-                [1,2,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1], // Row 6
-                [1,2,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1], // Row 7
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1], // Row 8
-                [0,0,0,0,0,0,2,0,0,0,0,0,0,5,0,0,0,0,0,0,0,2,0,0,0,0,0,0], // Row 9 (Upper Tunnel) - Blinky spawn (5)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 10
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,7,7,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 11 (Ghost Door at 11,13 and 11,14)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,5,5,5,1,1,1,1,1,2,1,1,1,1,1,1], // Row 12 (Ghost House: Inky, Pinky, Clyde spawns)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,4,4,4,1,1,1,1,1,2,1,1,1,1,1,1], // Row 13 (Ghost House Path)
-                [0,0,0,0,0,0,2,0,0,0,1,1,1,1,1,1,1,1,0,0,0,2,0,0,0,0,0,0], // Row 14 (Lower Tunnel)
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1], // Row 15
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 16
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 17
-                [1,2,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1], // Row 18
-                [1,2,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1], // Row 19
-                [1,3,2,2,2,2,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,2,2,2,2,3,1], // Row 20 (Power Pellets)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 21
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 22
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1], // Row 23
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1], // Row 24
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,6,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 25 (Pac-Man Start)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 26
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 27
-                [1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1], // Row 28
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 29
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]  // Row 30
-            ],
-            // Maze 2: Ms. Pac-Man Maze 2 (Light Blue) - UPDATED for 3x2 ghost house
-            [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],
-                [1,3,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,3,1],
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,7,7,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 9: Ghost Door
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,5,5,5,1,1,1,1,1,2,1,1,1,1,1,1], // Row 10: Ghost house interior (top row, spawns)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,4,4,4,1,1,1,1,1,2,1,1,1,1,1,1], // Row 11: Ghost house interior (bottom row, path)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 12: Bottom wall of ghost house
-                [0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0], // Row 13
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1], // Row 14
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1], // Row 15
-                [1,2,2,2,2,2,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,2,2,2,2,2,1], // Row 16
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 17
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 18
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 19
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 20
-                [1,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,1], // Row 21 (Power Pellets)
-                [1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1], // Row 22
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,6,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 23 (Pac-Man Start)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]  // Row 24
-            ],
-            // Maze 3: Ms. Pac-Man Maze 3 (Brown) - UPDATED for 3x2 ghost house
-            [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,7,7,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 9: Ghost Door
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,5,5,5,1,1,1,1,1,2,1,1,1,1,1,1], // Row 10: Ghost house interior (top row, spawns)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,4,4,4,1,1,1,1,1,2,1,1,1,1,1,1], // Row 11: Ghost house interior (bottom row, path)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 12: Bottom wall of ghost house
-                [0,0,0,0,0,0,2,0,0,0,1,4,4,4,4,4,4,1,0,0,0,2,0,0,0,0,0,0], // Row 13
-                [1,2,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1], // Row 14
-                [1,2,1,1,1,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,1,1,1,1,1], // Row 15
-                [1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1], // Row 16
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 17
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 18
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 19
-                [1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1], // Row 20 (Power Pellets)
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1], // Row 21
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1], // Row 22
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1], // Row 23
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1], // Row 24
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1], // Row 25
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,6,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 26 (Pac-Man Start)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]  // Row 27 (Increased from 28 to 27 to accommodate new GH position)
-            ],
-            // Maze 4: Ms. Pac-Man Maze 4 (Dark Blue)
-            [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 0 (Outer Wall)
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 1 (Path & Tunnel)
-                [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1], // Row 2 (Open Path)
-                [1,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1], // Row 3 (Power Pellets & Open Path)
-                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // Row 4 (Open Path)
-                [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1], // Row 5 (Open Path)
-                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1], // Row 6 (Open Path)
-                [1,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 7 (Open Path)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 8 (New wall above Blinky)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,7,7,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 9: Ghost Door
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,5,5,5,1,1,1,1,1,2,1,1,1,1,1,1], // Row 10: Ghost house interior (top row, spawns)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,4,4,4,1,1,1,1,1,2,1,1,1,1,1,1], // Row 11: Ghost house interior (bottom row, path)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 12: Bottom wall of ghost house
-                [0,0,2,0,0,0,2,0,0,0,1,1,1,1,1,1,1,1,0,0,0,2,0,0,0,0,0,0], // Row 13 (Lower Tunnel)
-                [1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 14 (Open Path)
-                [1,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 15 (Open Path)
-                [1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 16 (Open Path)
-                [1,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 17 (Open Path)
-                [1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 18 (Open Path)
-                [1,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 19 (Open Path)
-                [1,3,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,3,1], // Row 20 (Power Pellets & Open Path)
-                [1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 21 (Open Path)
-                [1,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 22 (Open Path)
-                [1,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 23 (Open Path)
-                [1,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1], // Row 24 (Open Path)
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,6,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 25 (Pac-Man Start & Open Path)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 26 (Outer Wall)
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 27 (Open Path)
-                [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1], // Row 28 (Open Path)
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 29 (Open Path)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]  // Row 30 (Outer Wall)
-            ],
-            // Maze 5: Unique Diagnostic Maze (index 5) - This was previously index 6. I've re-indexed it.
-            // This maze is a copy of Pacman Map 1 (index 0) with a block shift applied.
-            [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], // Row 0
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 1
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 2
-                [1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1], // Row 3
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 4
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 5
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1], // Row 6
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1], // Row 7
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1], // Row 8
-                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 9 (Empty path)
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,0,0,0,1,1,1,1,1,2,1,1,1,1,1,1], // Row 10 (Path around Blinky)
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,5,0,0,1,1,1,1,1,2,1,1,1,1,1,1], // Row 11 (Path around Blinky) - Blinky's start (5) at 11,13
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,7,7,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 12 (Ghost Door)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,5,5,5,1,1,1,1,1,2,1,1,1,1,1,1], // Row 13 (Ghost house interior - spawns)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,4,4,4,1,1,1,1,1,2,1,1,1,1,1,1], // Row 14 (Ghost house interior - path)
-                [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1], // Row 15 (Bottom wall of ghost house)
-                [0,0,0,0,0,0,2,0,0,0,1,4,4,4,4,4,4,1,0,0,0,2,0,0,0,0,0,0], // Row 16 (Tunnel)
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1], // Row 17
-                [1,1,1,1,1,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,1,1,1,1,1], // Row 18
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1], // Row 19
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 20
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 21
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1], // Row 22
-                [1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1], // Row 23
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1], // Row 24
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1], // Row 25
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1], // Row 26
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1], // Row 27
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1], // Row 28
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,6,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Row 29 (Pac-Man)
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]  // Row 30 (New last row to maintain 31 rows total)
-            ],
-            // Maze 6: Experimental Map 1-2 (index 6)
-            [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,4,4,4,0,4,4,0,4,4,4,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,4,1,1,1,7,7,1,1,1,4,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,4,1,4,4,0,0,4,4,1,4,1,1,2,1,1,1,1,1,1],
-                [0,4,4,4,4,4,2,4,4,4,1,4,4,4,4,4,4,1,4,4,4,2,4,4,4,4,4,0], // Row 15: Now a tunnel
-                [1,1,1,1,1,1,2,1,1,4,1,4,4,0,4,4,4,1,4,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,0,4,4,4,4,4,4,4,4,0,1,1,2,1,1,1,1,1,1], // Row 16: Updated to match latest export
-                [1,1,1,1,1,1,2,1,1,0,4,4,4,4,4,4,4,4,0,1,1,2,1,1,1,1,1,1], // Row 17: Updated to match latest export
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1], // Row 18: Updated to match latest export
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1],
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,6,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Pac-Man start (6) at [29,13]
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-            ],
-            // Maze 7: Experimental Map 1-3 (index 7)
-            [
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],
-                [1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,4,4,4,0,4,4,0,4,4,4,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,4,1,1,1,7,7,1,1,1,4,1,1,2,1,1,1,1,1,1],
-                [1,1,1,1,1,1,2,1,1,4,1,4,4,0,0,4,4,1,4,1,1,2,1,1,1,1,1,1],
-                [0,4,4,4,4,4,2,4,4,4,1,4,4,4,4,4,4,1,4,4,4,2,4,4,4,4,4,0], // Row 15: Now a tunnel
-                [1,1,1,1,1,1,2,1,1,4,1,1,1,1,1,1,1,1,4,1,1,2,1,1,1,1,1,1], // Row 16: Updated to match latest export
-                [1,1,1,1,1,1,2,1,1,0,4,4,4,4,4,4,4,4,0,1,1,2,1,1,1,1,1,1], // Row 17: Updated to match latest export
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1], // Row 18: Updated to match latest export
-                [1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
-                [1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1],
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],
-                [1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],
-                [1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],
-                [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],
-                [1,2,2,2,2,2,2,2,2,2,2,2,2,6,2,2,2,2,2,2,2,2,2,2,2,2,2,1], // Pac-Man start (6) at [29,13]
-                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                "############################",
+                "#............##............#",
+                "#.####.#####.##.#####.####.#",
+                "#o####.#####.##.#####.####o#",
+                "#.####.#####.##.#####.####.#",
+                "#..........................#",
+                "#.####.##.########.##.####.#",
+                "#.####.##.########.##.####.#",
+                "#......##....##....##......#",
+                "######.##### ## #####.######",
+                "######.##### ## #####.######",
+                "######.##~~~ ~~ ~~~##.######",
+                "######.##~###==###~##.######",
+                "######.##~#~~  ~~#~##.######",
+                " ~~~~~.~~~#~~~~~~#~~~.~~~~~ ",
+                "######.##~########~##.######",
+                "######.## ~~~~~~~~ ##.######",
+                "######.## ######## ##.######",
+                "######.## ######## ##.######",
+                "#............##............#",
+                "#.####.#####.##.#####.####.#",
+                "#.####.#####.##.#####.####.#",
+                "#o..##.......  .......##..o#",
+                "###.##.##.########.##.##.###",
+                "###.##.##.########.##.##.###",
+                "#......##....##....##......#",
+                "#.##########.##.##########.#",
+                "#.##########.##.##########.#",
+                "#............@.............#",
+                "############################"
             ]
         ];
-        // console.log("MAZES array length after definition:", MAZES.length); // Removed verbose log
-
 
         // --- Game Variables ---
         let canvas, ctx;
-        // The pacman object will now have its properties dynamically set from CHARACTER_CONFIGS
         let pacman = { x: 0, y: 0, dx: 0, dy: 0, nextDx: 0, nextDy: 0, mouthState: 0, currentMouthFrameIndex: 0, mouthAnimationFrames: [], chompInterval: 0, color: '', deathAnimationType: '', speedNormal: 0, speedFrightened: 0 };
         let ghosts = [];
         let dotsRemaining;
         let score = 0;
         let lives = 3;
-        let level = 0; // Index for LEVEL_PROGRESSION_DATA array
+        let level = 0;
         let gameOver = false;
         let gameWin = false;
         let frightenedMode = false;
         let frightenedTimer = 0;
-        let mouthAnimationTimer = 0; // New timer for mouth animation
-        // FRIGHTENED_DURATION is now part of DIFFICULTY_TIERS
-        let currentMaze; // Declare currentMaze here to ensure it's in scope
-        let paused = false; // New: Game paused state
-        let showGhostHouseDebug = false; // NEW: Debug toggle for ghost house
-        let isBuildModeActive = false; // NEW: Build mode toggle
-        let buildCursor = { row: 0, col: 0, flashState: true, flashTimer: 0, feedbackTimer: 0, feedbackActive: false }; // NEW: Build cursor state
+        let mouthAnimationTimer = 0;
+        let currentMaze;
+        let paused = false;
+        let showGhostHouseDebug = false;
+        let isBuildModeActive = false;
+        let buildCursor = { row: 0, col: 0, flashState: true, flashTimer: 0, feedbackTimer: 0, feedbackActive: false };
 
-        // Game State management
-        let gameState = 'level_select'; // 'level_select', 'ready_prompt', 'playing', 'game_over', 'game_win', 'build_mode'
+        let gameState = 'level_select';
         let readyPromptTimer = 0;
-        const READY_PROMPT_DURATION = 2000; // 2 seconds
+        const READY_PROMPT_DURATION = 2000;
 
-        // Power Pellet flashing
         let powerPelletFlashState = true;
         let powerPelletFlashTimer = 0;
 
-        // Animation frame ID for canceling the game loop
         let animationFrameId = null;
-
-        // Last frame time for delta time calculation
         let lastFrameTime = null;
 
-        // Tile types for toggling in build mode (now includes 5 and 6)
-        const BUILD_TILE_TYPES = [0, 2, 1, 3, 4, 7, 5, 6]; // Path, Dot, Wall, Power Pellet, Ghost House Path, Ghost Door, Ghost Start, Pac-Man Start
+        const BUILD_TILE_TYPES = [0, 2, 1, 3, 4, 7, 5, 6];
 
 
         // --- Utility Functions ---
+        function parseMaze(mazeStringArray) {
+            return mazeStringArray.map(rowString => 
+                rowString.split('').map(char => tileSymbols[char] || 0)
+            );
+        }
+
         function getMazeDimensions() {
-            // Defensive check: Ensure currentMaze is defined before accessing its properties
             if (!currentMaze || !currentMaze.length || !currentMaze[0]) {
                 console.error("Error: currentMaze is undefined or malformed when getting dimensions.", currentMaze);
-                // Fallback to a default size or handle error gracefully
-                return { rows: 31, cols: 28 }; // Default to standard Pac-Man size based on MAZES[7]
+                return { rows: 31, cols: 28 };
             }
             const rows = currentMaze.length;
             const cols = currentMaze[0].length;
@@ -851,20 +529,18 @@
         function copyMazeToClipboard() {
             const mazeJson = JSON.stringify(currentMaze);
             const confirmationDiv = document.getElementById('copyConfirmation');
-
-            // Use a temporary textarea element for copying to clipboard
             const tempTextArea = document.createElement('textarea');
             tempTextArea.value = mazeJson;
-            tempTextArea.style.position = 'absolute'; // Hide it visually
+            tempTextArea.style.position = 'absolute';
             tempTextArea.style.left = '-9999px';
             document.body.appendChild(tempTextArea);
-            tempTextArea.select(); // Select the text in the textarea
+            tempTextArea.select();
 
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
                     confirmationDiv.innerText = 'Copied to clipboard!';
-                    confirmationDiv.style.color = '#00ff00'; // Green for success
+                    confirmationDiv.style.color = '#00ff00';
                 } else {
                     confirmationDiv.innerText = 'Failed to copy! Please copy manually.';
                     confirmationDiv.style.color = 'red';
@@ -875,13 +551,13 @@
                 confirmationDiv.style.color = 'red';
                 console.error('Error attempting to copy maze JSON:', err);
             } finally {
-                document.body.removeChild(tempTextArea); // Always remove the temporary textarea
+                document.body.removeChild(tempTextArea);
                 confirmationDiv.classList.add('show');
                 setTimeout(() => {
                     confirmationDiv.classList.remove('show');
-                    confirmationDiv.innerText = 'Copied to clipboard!'; // Reset text for next time
-                    confirmationDiv.style.color = '#00ff00'; // Reset color
-                }, 1500); // Show for 1.5 seconds
+                    confirmationDiv.innerText = 'Copied to clipboard!';
+                    confirmationDiv.style.color = '#00ff00';
+                }, 1500);
             }
         }
 
@@ -890,37 +566,30 @@
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
 
-            // Initialize currentMaze with the first maze data to prevent errors before level selection
-            currentMaze = MAZES[0].map(row => [...row]); // Deep copy
+            currentMaze = parseMaze(MAZE_DATA_STRINGS[0]);
 
-            // Hide canvas and game info initially
             canvas.style.display = 'none';
             document.querySelector('.game-info').style.display = 'none';
             document.getElementById('gameStatus').style.display = 'none';
-            document.getElementById('pauseMenuOverlay').style.display = 'none'; // Hide pause menu initially
-            document.getElementById('buildModeControls').style.display = 'none'; // Hide build mode controls initially
+            document.getElementById('pauseMenuOverlay').style.display = 'none';
+            document.getElementById('buildModeControls').style.display = 'none';
 
-            // Show level select overlay
             document.getElementById('levelSelectOverlay').style.display = 'flex';
-            generateLevelSelectButtons(); // Generate buttons based on LEVEL_PROGRESSION_DATA
+            generateLevelSelectButtons();
 
-            // Set canvas size based on maze dimensions (using first maze for initial sizing)
-            // This is just for initial setup; actual size will be set in startGame
-            const { rows, cols } = getMazeDimensions(); // Use the defensive function
+            const { rows, cols } = getMazeDimensions();
             canvas.width = cols * TILE_SIZE;
             canvas.height = rows * TILE_SIZE;
 
-            // Add event listeners for UI buttons/toggles
             document.getElementById('resumeGameButton').addEventListener('click', togglePause);
             document.getElementById('returnToStartMenuButton').addEventListener('click', returnToStartMenu);
             document.getElementById('showGhostHouseToggle').addEventListener('change', (e) => {
                 showGhostHouseDebug = e.target.checked;
-                // Redraw the canvas immediately to show/hide the debug outline
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 drawMaze();
                 if (gameState === 'build_mode') {
                     drawBuildCursor();
-                    updateBuildModeCounters(); // Update counters on debug toggle
+                    updateBuildModeCounters();
                 } else {
                     drawPacman();
                     ghosts.forEach(drawGhost);
@@ -933,12 +602,10 @@
                     document.getElementById('buildModeControls').style.display = 'flex';
                     buildCursor.row = 0;
                     buildCursor.col = 0;
-                    updateBuildModeCounters(); // Initial update when entering build mode
+                    updateBuildModeCounters();
                 } else {
-                    // When exiting build mode, reset to level select
                     returnToStartMenu();
                 }
-                // Redraw immediately after mode change
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 drawMaze();
                 if (gameState === 'build_mode') {
@@ -948,17 +615,13 @@
             document.getElementById('exportMazeJsonButton').addEventListener('click', copyMazeToClipboard);
         }
 
-        // Function to generate level select buttons dynamically
         function generateLevelSelectButtons() {
             const buttonContainer = document.getElementById('levelSelectButtons');
-            // Keep the build mode toggle, don't clear it
             const buildModeToggleContainer = document.getElementById('buildModeToggle').parentNode;
-            buttonContainer.innerHTML = ''; // Clear existing buttons
+            buttonContainer.innerHTML = '';
             buttonContainer.appendChild(buildModeToggleContainer);
 
-
-            // Group levels by game and map number
-            const groupedLevels = new Map(); // Map<GameName, Map<MapNumber, Array<LevelData>>>
+            const groupedLevels = new Map();
 
             LEVEL_PROGRESSION_DATA.forEach((levelData, index) => {
                 const { game, mapNumber } = levelData.displayName;
@@ -969,20 +632,16 @@
                 if (!gameMaps.has(mapNumber)) {
                     gameMaps.set(mapNumber, []);
                 }
-                groupedLevels.get(game).get(mapNumber).push({ levelData, index });
+                gameMaps.get(mapNumber).push({ levelData, index });
             });
 
-            // Define custom sorting order for game names
-            const customGameOrder = ['Pacman', 'Ms. Pacman', 'Experimental'];
-
-            // Sort game names based on the custom order
+            const customGameOrder = ['Pacman', 'Experimental'];
             const sortedGameNames = Array.from(groupedLevels.keys()).sort((a, b) => {
                 return customGameOrder.indexOf(a) - customGameOrder.indexOf(b);
             });
 
             sortedGameNames.forEach(gameName => {
                 const gameMaps = groupedLevels.get(gameName);
-                // Sort map numbers numerically
                 const sortedMapNumbers = Array.from(gameMaps.keys()).sort((a, b) => a - b);
 
                 sortedMapNumbers.forEach(mapNumber => {
@@ -996,13 +655,12 @@
                     titleSpan.innerText = `${gameName} Map ${mapNumber}:`;
                     mapRowDiv.appendChild(titleSpan);
 
-                    // Sort iterations numerically within each map
                     levelsInMap.sort((a, b) => a.levelData.displayName.iteration - b.levelData.displayName.iteration);
 
                     levelsInMap.forEach(({ levelData, index }) => {
                         const button = document.createElement('button');
                         const { iteration } = levelData.displayName;
-                        button.innerText = `${mapNumber}-${iteration}`; // Only show iteration number
+                        button.innerText = `${mapNumber}-${iteration}`;
                         button.onclick = () => startGame(index);
                         mapRowDiv.appendChild(button);
                     });
@@ -1011,36 +669,32 @@
             });
         }
 
-        // New function to start the game after level selection
         function startGame(selectedLevelIndex) {
-            level = selectedLevelIndex; // Set the global level variable
-            document.getElementById('levelSelectOverlay').style.display = 'none'; // Hide level select
-            canvas.style.display = 'block'; // Show canvas
-            document.querySelector('.game-info').style.display = 'flex'; // Show game info
-            document.getElementById('gameStatus').style.display = 'block'; // Show game status area
+            level = selectedLevelIndex;
+            document.getElementById('levelSelectOverlay').style.display = 'none';
+            canvas.style.display = 'block';
+            document.querySelector('.game-info').style.display = 'flex';
+            document.getElementById('gameStatus').style.display = 'block';
 
-            resetLevel(); // Load the selected maze
+            resetLevel();
             
-            // Re-set canvas size based on the selected maze dimensions
             const { rows, cols } = getMazeDimensions();
             canvas.width = cols * TILE_SIZE;
             canvas.height = rows * TILE_SIZE;
 
             if (isBuildModeActive) {
                 gameState = 'build_mode';
-                document.getElementById('buildModeControls').style.display = 'flex'; // Show build mode controls
-                buildCursor.row = 0; // Reset cursor position
+                document.getElementById('buildModeControls').style.display = 'flex';
+                buildCursor.row = 0;
                 buildCursor.col = 0;
-                updateBuildModeCounters(); // Initial update when entering build mode
+                updateBuildModeCounters();
             } else {
                 gameState = 'ready_prompt';
                 readyPromptTimer = READY_PROMPT_DURATION;
-                document.getElementById('buildModeControls').style.display = 'none'; // Hide build mode controls
+                document.getElementById('buildModeControls').style.display = 'none';
             }
 
-            // Crucial: Reset lastFrameTime to null before starting a new animation loop sequence
             lastFrameTime = null; 
-            // Start the game loop. Cancel any existing one to prevent multiple loops.
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
             }
@@ -1048,94 +702,80 @@
         }
 
         function resetLevel() {
-            // Check if all levels are completed
             if (level >= LEVEL_PROGRESSION_DATA.length) {
                 gameWin = true;
                 document.getElementById('gameStatus').innerText = "YOU WIN! Congratulations!";
-                gameState = 'game_win'; // Update game state
+                gameState = 'game_win';
                 return;
             }
 
-            // Get current level's progression data
             let currentLevelData = LEVEL_PROGRESSION_DATA[level];
             if (!currentLevelData) {
-                console.error(`Error: Level progression data for level ${level} is undefined! Cannot reset level. Falling back to level 0.`);
-                level = 0; // Fallback to level 0 if data is missing
+                console.error(`Error: Level progression data for level ${level} is undefined!`);
+                level = 0;
                 currentLevelData = LEVEL_PROGRESSION_DATA[0];
-                // If even LEVEL_PROGRESSION_DATA[0] is undefined, we have a bigger problem.
                 if (!currentLevelData) {
-                    console.error("Critical Error: LEVEL_PROGRESSION_DATA[0] is also undefined. Cannot proceed.");
+                    console.error("Critical Error: LEVEL_PROGRESSION_DATA[0] is also undefined.");
                     document.getElementById('gameStatus').innerText = "CRITICAL ERROR: Game data missing!";
                     gameOver = true;
                     gameState = 'game_over';
-                    return; // Stop here to prevent further errors
+                    return; 
                 }
             }
 
             const targetMazeIndex = currentLevelData.mazeIndex;
-            const mazeDataToLoad = MAZES[targetMazeIndex];
+            const mazeDataToLoad = MAZE_DATA_STRINGS[targetMazeIndex];
 
             if (mazeDataToLoad === undefined) {
-                console.error(`Critical Error: MAZES[${targetMazeIndex}] is undefined! Cannot load maze.`);
+                console.error(`Critical Error: MAZE_DATA_STRINGS[${targetMazeIndex}] is undefined!`);
                 document.getElementById('gameStatus').innerText = "ERROR: Maze data missing!";
                 gameOver = true;
                 gameState = 'game_over';
                 return;
             }
 
-            // Load maze based on currentLevelData.mazeIndex
-            currentMaze = mazeDataToLoad.map(row => [...row]); // Deep copy the maze
+            currentMaze = parseMaze(mazeDataToLoad);
             
             dotsRemaining = 0;
             ghosts = [];
 
-            // Determine the character config for the current level
             const currentCharacterConfig = CHARACTER_CONFIGS[currentLevelData.characterType];
-
-            // Determine the difficulty config for the current level
             const currentDifficultyTier = DIFFICULTY_TIERS[currentLevelData.difficultyTierIndex];
-
-            // Get the ghost house configuration for the current maze
             const currentGhostHouseConfig = GHOST_HOUSE_CONFIGS[currentLevelData.mazeIndex];
 
-            // Find Pac-Man and count dots
             for (let r = 0; r < currentMaze.length; r++) {
                 for (let c = 0; c < currentMaze[r].length; c++) {
                     const tile = currentMaze[r][c];
                     if (tile === 2) {
                         dotsRemaining++;
                     } else if (tile === 3) {
-                        dotsRemaining++; // Power pellets also count as dots to clear the level
-                    } else if (tile === 6) { // Pac-Man start
+                        dotsRemaining++; 
+                    } else if (tile === 6) {
                         pacman.x = c * TILE_SIZE + TILE_SIZE / 2;
                         pacman.y = r * TILE_SIZE + TILE_SIZE / 2;
                         pacman.dx = 0;
                         pacman.dy = 0;
                         pacman.nextDx = 0;
                         pacman.nextDy = 0;
-                        // Apply character-specific properties
                         pacman.mouthState = currentCharacterConfig.initialMouthState;
-                        pacman.currentMouthFrameIndex = 0; // Always start at first frame of animation
+                        pacman.currentMouthFrameIndex = 0; 
                         pacman.mouthAnimationFrames = currentCharacterConfig.mouthAnimationFrames;
                         pacman.chompInterval = currentCharacterConfig.chompInterval;
                         pacman.color = currentCharacterConfig.color;
                         pacman.deathAnimationType = currentCharacterConfig.deathAnimationType;
-                        // Apply level-specific speeds to Pac-Man
                         pacman.speedNormal = currentDifficultyTier.pacmanNormal;
                         pacman.speedFrightened = currentDifficultyTier.pacmanFrightened;
-
-                        currentMaze[r][c] = 0; // Clear the starting spot
+                        currentMaze[r][c] = 0;
                     }
                 }
             }
 
-            // Initialize ghosts based on their specific starting tiles from GHOST_HOUSE_CONFIGS
             const ghostNames = ['blinky', 'pinky', 'inky', 'clyde'];
             ghosts = [];
             for (const name of ghostNames) {
-                const startPos = currentGhostHouseConfig[`${name}Start`]; // Get start position from config
+                const startPos = currentGhostHouseConfig[`${name}Start`];
                 if (startPos) {
-                    const newGhost = { // Create a temporary object to log before pushing
+                    const newGhost = { 
                         name: name,
                         x: startPos.col * TILE_SIZE + TILE_SIZE / 2,
                         y: startPos.row * TILE_SIZE + TILE_SIZE / 2,
@@ -1143,22 +783,20 @@
                         dy: 0,
                         frightened: false,
                         eaten: false,
-                        state: (name === 'blinky') ? 'active' : 'inHouse', // FIXED: Blinky is now active at start
-                        // Apply level-specific speeds to ghosts
+                        state: (name === 'blinky') ? 'active' : 'inHouse', 
                         speedChase: currentDifficultyTier.ghostChase,
                         speedFrightened: currentDifficultyTier.ghostFrightened,
-                        speedTunnel: currentDifficultyTier.ghostTunnel // THIS LINE IS CRITICAL
+                        speedTunnel: currentDifficultyTier.ghostTunnel 
                     };
-                    // Give Blinky an initial direction to get him moving
                     if (name === 'blinky') {
-                        newGhost.dy = -1; // Move him up initially
+                        newGhost.dx = -1; 
                     }
                     ghosts.push(newGhost);
                 }
             }
 
             frightenedMode = false;
-            frightenedTimer = 0; // Reset timer, will be set when frightened mode activates
+            frightenedTimer = 0; 
         }
 
         function updateUI() {
@@ -1175,97 +813,179 @@
         }
 
         // --- Drawing Functions ---
-        function drawMaze() {
-            const { rows, cols } = getMazeDimensions();
-            // Use the wall color specific to the current level
-            // Use currentLevelData.mazeIndex to get the correct wall color
-            const currentLevelData = LEVEL_PROGRESSION_DATA[level];
-            const wallColor = MAZE_WALL_COLORS[currentLevelData.mazeIndex % MAZE_WALL_COLORS.length];
+/**
+ * Draws the maze walls on the canvas with a hollow, rounded, contiguous style.
+ * This function implements the required two-phase drawing process.
+ *
+ * It relies on access to the following global variables:
+ * - ctx: The 2D canvas rendering context.
+ * - currentMaze: A 2D array where `1` represents a wall and any other value is an open path.
+ * - TILE_SIZE: The pixel dimension (width and height) of a single maze tile.
+ * - wallColor: The CSS color string to use for the walls.
+ */
+function drawMaze() {
+    /**
+     * Helper function to check if a tile at given coordinates is a wall.
+     * Treats any coordinates outside the maze boundaries as non-walls (open space).
+     * @param {number} r - The row index.
+     * @param {number} c - The column index.
+     * @returns {boolean} - True if the tile is a wall, false otherwise.
+     */
+    const isWall = (r, c) => {
+        return r >= 0 && r < currentMaze.length &&
+               c >= 0 && c < currentMaze[0].length &&
+               currentMaze[r][c] === 1;
+    };
 
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const tile = currentMaze[r][c];
-                    const x = c * TILE_SIZE;
-                    const y = r * TILE_SIZE;
+    const inset = TILE_SIZE * 0.25;
+    const radius = inset; // The radius for rounded corners is the same as the inset.
 
-                    if (tile === 1) { // Wall
-                        ctx.fillStyle = wallColor; // Use dynamic wall color
-                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                    } else if (tile === 2) { // Dot
-                        ctx.fillStyle = DOT_COLOR;
-                        ctx.beginPath();
-                        ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, DOT_RADIUS, 0, Math.PI * 2);
-                        ctx.fill();
-                    } else if (tile === 3) { // Power Pellet
-                        // Only draw if flashing state is true
-                        if (powerPelletFlashState) {
-                            ctx.fillStyle = POWER_PELLET_COLOR;
-                            ctx.beginPath();
-                            ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, POWER_PELLET_RADIUS, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
-                    } else if (tile === 7) { // Ghost Door
-                        ctx.fillStyle = '#FFB8FF'; // Light pink/purple for the ghost door
-                        const doorHeight = 4; // The height of the door line
-                        // Draw the door centered within its tile
-                        ctx.fillRect(x, y + TILE_SIZE / 2 - doorHeight / 2, TILE_SIZE, doorHeight);
-                    } else if (gameState === 'build_mode') {
-                        if (tile === 5) { // Ghost Start (Build Mode Visual)
-                            ctx.fillStyle = '#FFC0CB'; // Pinkish color for generic ghost
-                            ctx.beginPath();
-                            ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, GHOST_RADIUS, Math.PI, 0, false); // Top half
-                            ctx.lineTo(x + TILE_SIZE / 2 + GHOST_RADIUS, y + TILE_SIZE / 2 + GHOST_RADIUS);
-                            ctx.lineTo(x + TILE_SIZE / 2 + GHOST_RADIUS * 0.6, y + TILE_SIZE / 2 + GHOST_RADIUS * 0.6);
-                            ctx.lineTo(x + TILE_SIZE / 2 + GHOST_RADIUS * 0.2, y + TILE_SIZE / 2 + GHOST_RADIUS);
-                            ctx.lineTo(x + TILE_SIZE / 2 - GHOST_RADIUS * 0.2, y + TILE_SIZE / 2 + GHOST_RADIUS * 0.6);
-                            ctx.lineTo(x + TILE_SIZE / 2 - GHOST_RADIUS * 0.6, y + TILE_SIZE / 2 + GHOST_RADIUS);
-                            ctx.lineTo(x + TILE_SIZE / 2 - GHOST_RADIUS, y + TILE_SIZE / 2);
-                            ctx.fill();
-                        } else if (tile === 6) { // Pac-Man Start (Build Mode Visual)
-                            ctx.fillStyle = '#FFFF00'; // Yellow
-                            ctx.beginPath();
-                            const mouthHalfAngle = (90 / 2) * (Math.PI / 180); // Always fully open
-                            const currentRotation = 0; // Always facing right
-                            const startAngle = currentRotation + mouthHalfAngle;
-                            const endAngle = currentRotation + (Math.PI * 2 - mouthHalfAngle);
-                            ctx.moveTo(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
-                            ctx.lineTo(x + TILE_SIZE / 2 + PACMAN_RADIUS * Math.cos(startAngle),
-                                       y + TILE_SIZE / 2 + PACMAN_RADIUS * Math.sin(startAngle));
-                            ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, PACMAN_RADIUS, startAngle, endAngle);
-                            ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE / 2);
-                            ctx.fill();
-                        } else if (tile === 4) { // Ghost House Path (Build Mode Visual)
-                            ctx.fillStyle = GHOST_PATH_COLOR_BUILD_MODE; // Dark grey for ghost path
-                            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                        } else if (tile === 0) { // Regular Path (Build Mode Visual)
-                            ctx.fillStyle = PATH_COLOR; // Black for regular path
-                            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                        }
-                    } else { // Not in build mode, draw regular paths as black
-                        if (tile === 0 || tile === 4 || tile === 5 || tile === 6) { // Draw all paths, ghost paths, and start points as black
-                            ctx.fillStyle = PATH_COLOR;
-                            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                        }
-                    }
-                }
+    // =========================================================================
+    // ## Phase 1: Draw Solid, Inset Wall Segments
+    // This phase creates the base shape of the walls. It draws a solid rectangle
+    // for each wall tile, but "retreats" any edge that borders an open path.
+    // This technique merges adjacent wall tiles into a single, blocky shape.
+    // =========================================================================
+    ctx.fillStyle = wallColor;
+    ctx.beginPath(); // Using a single path for all rectangles is more performant.
+
+    for (let r = 0; r < currentMaze.length; r++) {
+        for (let c = 0; c < currentMaze[0].length; c++) {
+            if (!isWall(r, c)) {
+                continue; // Skip any tile that isn't a wall.
             }
 
-            // Diagnostic purple square (top-left corner)
+            // Start with the tile's full dimensions.
+            let x = c * TILE_SIZE;
+            let y = r * TILE_SIZE;
+            let w = TILE_SIZE;
+            let h = TILE_SIZE;
+
+            // Adjust dimensions based on neighbors. If a side borders open space,
+            // it gets inset.
+            if (!isWall(r - 1, c)) { // Border with open space above.
+                y += inset;
+                h -= inset;
+            }
+            if (!isWall(r + 1, c)) { // Border with open space below.
+                h -= inset;
+            }
+            if (!isWall(r, c - 1)) { // Border with open space to the left.
+                x += inset;
+                w -= inset;
+            }
+            if (!isWall(r, c + 1)) { // Border with open space to the right.
+                w -= inset;
+            }
+
+            // Add the calculated rectangle to the path.
+            ctx.rect(x, y, w, h);
+        }
+    }
+    ctx.fill(); // Draw all collected rectangles in a single operation.
+
+    // =========================================================================
+    // ## Phase 2: Carve and Add Rounded Corners
+    // This phase iterates again to smooth the blocky shape from Phase 1. It adds
+    // filled circles to create rounded outer corners and uses the background
+    // color to "carve out" rounded inner corners.
+    // =========================================================================
+
+    // ### Part A: Add Rounded Outer Corners
+    ctx.fillStyle = wallColor;
+    for (let r = 0; r < currentMaze.length; r++) {
+        for (let c = 0; c < currentMaze[0].length; c++) {
+            if (!isWall(r, c)) {
+                continue;
+            }
+
+            // An outer corner exists where a wall tile has two adjacent non-wall neighbors.
+            // We draw a circle in the wall color to round these corners.
+
+            // Top-left outer corner
+            if (!isWall(r - 1, c) && !isWall(r, c - 1)) {
+                ctx.beginPath();
+                ctx.arc(c * TILE_SIZE + inset, r * TILE_SIZE + inset, radius, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            // Top-right outer corner
+            if (!isWall(r - 1, c) && !isWall(r, c + 1)) {
+                ctx.beginPath();
+                ctx.arc(c * TILE_SIZE + TILE_SIZE - inset, r * TILE_SIZE + inset, radius, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            // Bottom-left outer corner
+            if (!isWall(r + 1, c) && !isWall(r, c - 1)) {
+                ctx.beginPath();
+                ctx.arc(c * TILE_SIZE + inset, r * TILE_SIZE + TILE_SIZE - inset, radius, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            // Bottom-right outer corner
+            if (!isWall(r + 1, c) && !isWall(r, c + 1)) {
+                ctx.beginPath();
+                ctx.arc(c * TILE_SIZE + TILE_SIZE - inset, r * TILE_SIZE + TILE_SIZE - inset, radius, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+    }
+
+    // ### Part B: Carve Out Rounded Inner Corners
+    ctx.fillStyle = '#000000'; // Use black (or background color) to "erase".
+    
+    // An inner corner occurs at an intersection surrounded by three walls and one open path.
+    // We check each 2x2 block of tiles to find these locations.
+    for (let r = 0; r < currentMaze.length - 1; r++) {
+        for (let c = 0; c < currentMaze[0].length - 1; c++) {
+            const wall_NW = isWall(r, c);
+            const wall_NE = isWall(r, c + 1);
+            const wall_SW = isWall(r + 1, c);
+            const wall_SE = isWall(r + 1, c + 1);
+
+            const wallCount = wall_NW + wall_NE + wall_SW + wall_SE;
+
+            if (wallCount === 3) {
+                // This is an inner corner. Find the center for the carving circle.
+                const cornerX = (c + 1) * TILE_SIZE;
+                const cornerY = (r + 1) * TILE_SIZE;
+                let carveX, carveY;
+
+                // The carving circle's center depends on which of the four tiles is the open one.
+                if (!wall_NW) { // Inner corner points toward the Top-Left
+                    carveX = cornerX - inset;
+                    carveY = cornerY - inset;
+                } else if (!wall_NE) { // Inner corner points toward the Top-Right
+                    carveX = cornerX + inset;
+                    carveY = cornerY - inset;
+                } else if (!wall_SW) { // Inner corner points toward the Bottom-Left
+                    carveX = cornerX - inset;
+                    carveY = cornerY + inset;
+                } else { // !wall_SE, inner corner points toward the Bottom-Right
+                    carveX = cornerX + inset;
+                    carveY = cornerY + inset;
+                }
+                
+                // Draw the carving circle.
+                ctx.beginPath();
+                ctx.arc(carveX, carveY, radius, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+    }
+}
+
+            // Diagnostic square
             ctx.fillStyle = 'purple';
-            ctx.fillRect(0, 0, 10, 10); // Draw a small 10x10 purple square
+            ctx.fillRect(0, 0, 10, 10); 
 
 
-            // NEW: Draw Ghost House Debug Outline
             if (showGhostHouseDebug) {
                 const currentMazeIndex = LEVEL_PROGRESSION_DATA[level].mazeIndex;
                 const boundingBox = GHOST_HOUSE_BOUNDING_BOXES[currentMazeIndex];
                 const ghostConfig = GHOST_HOUSE_CONFIGS[currentMazeIndex];
 
                 if (boundingBox) {
-                    // Draw the main ghost house box (the walled area)
                     ctx.strokeStyle = 'red';
-                    ctx.lineWidth = 3; // Thicker line for visibility
-                    // Calculate pixel coordinates from tile coordinates
+                    ctx.lineWidth = 3; 
                     const startX = boundingBox.startCol * TILE_SIZE;
                     const startY = boundingBox.startRow * TILE_SIZE;
                     const width = (boundingBox.endCol - boundingBox.startCol + 1) * TILE_SIZE;
@@ -1273,7 +993,6 @@
                     ctx.strokeRect(startX, startY, width, height);
                 }
 
-                // Draw a separate box for Blinky's spawn point
                 if (ghostConfig && ghostConfig.blinkyStart) {
                     const blinkyX = ghostConfig.blinkyStart.col * TILE_SIZE;
                     const blinkyY = ghostConfig.blinkyStart.row * TILE_SIZE;
@@ -1285,36 +1004,34 @@
         }
 
         function drawPacman() {
-            ctx.save(); // Save the current canvas state
+            ctx.save(); 
 
             ctx.fillStyle = pacman.color;
             ctx.beginPath();
 
-            // Calculate mouth angles
-            const angle = Math.atan2(pacman.dy, pacman.dx); // Current direction
-            const mouthHalfAngle = (pacman.mouthState * 15) * (Math.PI / 180); // 15 degrees per state
+            const angle = Math.atan2(pacman.dy, pacman.dx); 
+            const mouthHalfAngle = (pacman.mouthState * 15) * (Math.PI / 180); 
             const startAngle = angle + mouthHalfAngle;
             const endAngle = angle + (Math.PI * 2 - mouthHalfAngle);
 
             ctx.arc(pacman.x, pacman.y, PACMAN_RADIUS, startAngle, endAngle);
-            ctx.lineTo(pacman.x, pacman.y); // Draw line to center to close mouth
+            ctx.lineTo(pacman.x, pacman.y); 
             ctx.closePath();
             ctx.fill();
 
-            ctx.restore(); // Restore the canvas state
+            ctx.restore(); 
         }
 
         function drawGhost(ghost) {
-            ctx.save(); // Save the current canvas state
+            ctx.save(); 
 
             let ghostColor = GHOST_COLORS[ghost.name];
             if (ghost.eaten) {
-                ghostColor = '#FFFFFF'; // White when eaten
+                ghostColor = '#FFFFFF'; 
             } else if (ghost.frightened) {
-                // Flash between blue and white if frightened and near end of timer
                 const currentLevelData = LEVEL_PROGRESSION_DATA[level];
                 const currentDifficultyTier = DIFFICULTY_TIERS[currentLevelData.difficultyTierIndex];
-                const flashThreshold = currentDifficultyTier.frightenedDurationMs / 4; // Flash in last quarter of duration
+                const flashThreshold = currentDifficultyTier.frightenedDurationMs / 4; 
                 if (frightenedTimer <= flashThreshold && Math.floor(frightenedTimer / 100) % 2 === 0) {
                     ghostColor = '#FFFFFF';
                 } else {
@@ -1323,33 +1040,29 @@
             }
             ctx.fillStyle = ghostColor;
 
-            // Draw ghost body (rounded top, flat bottom)
             ctx.beginPath();
-            ctx.arc(ghost.x, ghost.y, GHOST_RADIUS, Math.PI, 0, false); // Top half circle
-            ctx.lineTo(ghost.x + GHOST_RADIUS, ghost.y + GHOST_RADIUS); // Right side down
+            ctx.arc(ghost.x, ghost.y, GHOST_RADIUS, Math.PI, 0, false); 
+            ctx.lineTo(ghost.x + GHOST_RADIUS, ghost.y + GHOST_RADIUS); 
             
-            // Draw wobbly legs (simplified for now, can be animated later)
             const numLegs = 3;
             const legWidth = (GHOST_RADIUS * 2) / numLegs;
             for (let i = 0; i < numLegs; i++) {
                 const startX = ghost.x - GHOST_RADIUS + i * legWidth;
                 const endX = startX + legWidth;
-                ctx.lineTo(endX, ghost.y + GHOST_RADIUS + (i % 2 === 0 ? 0 : 3)); // Simple up/down wobble
+                ctx.lineTo(endX, ghost.y + GHOST_RADIUS + (i % 2 === 0 ? 0 : 3)); 
             }
-            ctx.lineTo(ghost.x - GHOST_RADIUS, ghost.y + GHOST_RADIUS); // Left side up
+            ctx.lineTo(ghost.x - GHOST_RADIUS, ghost.y + GHOST_RADIUS); 
             ctx.closePath();
             ctx.fill();
 
-            // Draw eyes
-            ctx.fillStyle = '#FFFFFF'; // White eyes
+            ctx.fillStyle = '#FFFFFF'; 
             ctx.beginPath();
-            ctx.arc(ghost.x - GHOST_RADIUS / 2.5, ghost.y - GHOST_RADIUS / 3, GHOST_RADIUS / 3, 0, Math.PI * 2); // Left eye
-            ctx.arc(ghost.x + GHOST_RADIUS / 2.5, ghost.y - GHOST_RADIUS / 3, GHOST_RADIUS / 3, 0, Math.PI * 2); // Right eye
+            ctx.arc(ghost.x - GHOST_RADIUS / 2.5, ghost.y - GHOST_RADIUS / 3, GHOST_RADIUS / 3, 0, Math.PI * 2); 
+            ctx.arc(ghost.x + GHOST_RADIUS / 2.5, ghost.y - GHOST_RADIUS / 3, GHOST_RADIUS / 3, 0, Math.PI * 2); 
             ctx.fill();
 
-            ctx.fillStyle = '#0000FF'; // Blue pupils
+            ctx.fillStyle = '#0000FF'; 
             ctx.beginPath();
-            // Pupils direction based on ghost.dx, ghost.dy (simplified: always center if eaten/frightened)
             let pupilOffsetX = 0;
             let pupilOffsetY = 0;
             if (!ghost.eaten && !ghost.frightened) {
@@ -1358,29 +1071,27 @@
                 if (ghost.dy > 0) pupilOffsetY = GHOST_RADIUS / 6;
                 else if (ghost.dy < 0) pupilOffsetY = -GHOST_RADIUS / 6;
             }
-            ctx.arc(ghost.x - GHOST_RADIUS / 2.5 + pupilOffsetX, ghost.y - GHOST_RADIUS / 3 + pupilOffsetY, GHOST_RADIUS / 6, 0, Math.PI * 2); // Left pupil
-            ctx.arc(ghost.x + GHOST_RADIUS / 2.5 + pupilOffsetX, ghost.y - GHOST_RADIUS / 3 + pupilOffsetY, GHOST_RADIUS / 6, 0, Math.PI * 2); // Right pupil
+            ctx.arc(ghost.x - GHOST_RADIUS / 2.5 + pupilOffsetX, ghost.y - GHOST_RADIUS / 3 + pupilOffsetY, GHOST_RADIUS / 6, 0, Math.PI * 2); 
+            ctx.arc(ghost.x + GHOST_RADIUS / 2.5 + pupilOffsetX, ghost.y - GHOST_RADIUS / 3 + pupilOffsetY, GHOST_RADIUS / 6, 0, Math.PI * 2); 
             ctx.fill();
 
-            ctx.restore(); // Restore the canvas state
+            ctx.restore(); 
         }
 
-        // NEW: Draw Build Cursor
         function drawBuildCursor() {
-            if (!buildCursor.feedbackActive) { // Normal flashing
+            if (!buildCursor.feedbackActive) {
                 if (buildCursor.flashState) {
                     ctx.strokeStyle = 'red';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(buildCursor.col * TILE_SIZE, buildCursor.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
-            } else { // Feedback flash
-                ctx.strokeStyle = 'lime'; // Green feedback color
-                ctx.lineWidth = 3; // Slightly thicker for emphasis
+            } else {
+                ctx.strokeStyle = 'lime'; 
+                ctx.lineWidth = 3; 
                 ctx.strokeRect(buildCursor.col * TILE_SIZE, buildCursor.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }
 
-        // NEW: Update Build Mode Counters
         function updateBuildModeCounters() {
             let ghostSpawnCount = 0;
             let pacmanSpawnPresent = false;
@@ -1416,7 +1127,6 @@
             const nextX = x + dx;
             const nextY = y + dy;
 
-            // Check corners of the bounding box
             const corners = [
                 { x: nextX - radius, y: nextY - radius },
                 { x: nextX + radius, y: nextY - radius },
@@ -1426,7 +1136,7 @@
 
             for (const corner of corners) {
                 const tile = getTileAtPixel(corner.x, corner.y);
-                if (tile && (tile.value === 1 || tile.value === 7)) { // Check for solid walls (1) AND ghost door (7)
+                if (tile && tile.value === 1) { 
                     return true;
                 }
             }
@@ -1434,27 +1144,21 @@
         }
 
         function movePacman() {
-            // Use level-specific speed for Pac-Man
             const pacmanSpeed = frightenedMode ? pacman.speedFrightened : pacman.speedNormal;
 
-            // Try to change direction first if a new direction is requested
             if (pacman.nextDx !== 0 || pacman.nextDy !== 0) {
-                // Check if the new requested direction leads into a wall or ghost door
                 if (!checkWallCollision(pacman.x, pacman.y, pacman.nextDx * pacmanSpeed, pacman.nextDy * pacmanSpeed, PACMAN_RADIUS)) {
                     pacman.dx = pacman.nextDx;
                     pacman.dy = pacman.nextDy;
-                    pacman.nextDx = 0; // Clear next direction
+                    pacman.nextDx = 0; 
                     pacman.nextDy = 0;
                 }
             }
 
-            // Calculate new position based on current dx/dy
             const newX = pacman.x + pacman.dx * pacmanSpeed;
             const newY = pacman.y + pacman.dy * pacmanSpeed;
 
-            // Check for collision with walls (1) or ghost door (7) at the new position
             if (checkWallCollision(pacman.x, pacman.y, pacman.dx * pacmanSpeed, pacman.dy * pacmanSpeed, PACMAN_RADIUS)) {
-                // Stop if hitting a wall or ghost door
                 pacman.dx = 0;
                 pacman.dy = 0;
             } else {
@@ -1462,23 +1166,22 @@
                 pacman.y = newY;
             }
 
-            // Handle warp tunnels (teleport to center of opposite portal tile)
-            const mazeCols = getMazeDimensions().cols; // Use defensive function
-            if (pacman.x < TILE_SIZE / 2 && pacman.dx < 0) { // Moving left off screen
-                pacman.x = (mazeCols - 0.5) * TILE_SIZE; // Center of last column's portal tile
-            } else if (pacman.x > canvas.width - TILE_SIZE / 2 && pacman.dx > 0) { // Moving right off screen
-                pacman.x = 0.5 * TILE_SIZE; // Center of first column's portal tile
+            const mazeCols = getMazeDimensions().cols; 
+            if (pacman.x < TILE_SIZE / 2 && pacman.dx < 0) { 
+                pacman.x = (mazeCols - 0.5) * TILE_SIZE; 
+            } else if (pacman.x > canvas.width - TILE_SIZE / 2 && pacman.dx > 0) { 
+                pacman.x = 0.5 * TILE_SIZE; 
             }
         }
 
         function eatDots() {
             const { row, col, value } = getTileAtPixel(pacman.x, pacman.y);
-            if (value === 2) { // Dot
-                currentMaze[row][col] = 0; // Remove dot
+            if (value === 2) {
+                currentMaze[row][col] = 0; 
                 score += 10;
                 dotsRemaining--;
-            } else if (value === 3) { // Power Pellet
-                currentMaze[row][col] = 0; // Remove power pellet
+            } else if (value === 3) {
+                currentMaze[row][col] = 0; 
                 score += 50;
                 dotsRemaining--;
                 activateFrightenedMode();
@@ -1487,20 +1190,19 @@
             if (dotsRemaining === 0) {
                 level++;
                 if (level < LEVEL_PROGRESSION_DATA.length) {
-                    resetLevel(); // Load next maze
-                    gameState = 'ready_prompt'; // Show ready prompt for new level
+                    resetLevel(); 
+                    gameState = 'ready_prompt'; 
                     readyPromptTimer = READY_PROMPT_DURATION;
-                    lastFrameTime = null; // Reset lastFrameTime for the new ready_prompt sequence
+                    lastFrameTime = null; 
                 } else {
                     gameWin = true;
-                    gameState = 'game_win'; // All levels completed
+                    gameState = 'game_win'; 
                 }
             }
         }
 
         function activateFrightenedMode() {
             frightenedMode = true;
-            // Get frightened duration from the current difficulty tier
             const currentLevelData = LEVEL_PROGRESSION_DATA[level];
             const currentDifficultyTier = DIFFICULTY_TIERS[currentLevelData.difficultyTierIndex];
             frightenedTimer = currentDifficultyTier.frightenedDurationMs;
@@ -1508,12 +1210,8 @@
             ghosts.forEach(ghost => {
                 if (!ghost.eaten) {
                     ghost.frightened = true;
-                    // Reverse ghost direction when frightened (if not in ghost house or on door)
-                    const currentTile = getTileAtPixel(ghost.x, ghost.y);
-                    if (currentTile && currentTile.value !== 4 && currentTile.value !== 5 && currentTile.value !== 7) {
-                        ghost.dx *= -1;
-                        ghost.dy *= -1;
-                    }
+                    ghost.dx *= -1;
+                    ghost.dy *= -1;
                 }
             });
         }
@@ -1522,24 +1220,22 @@
             const currentGhostHouseConfig = GHOST_HOUSE_CONFIGS[LEVEL_PROGRESSION_DATA[level].mazeIndex];
 
             ghosts.forEach(ghost => {
-                // Defensive check: Ensure x and y are numbers before any calculations
                 if (typeof ghost.x !== 'number' || isNaN(ghost.x)) {
-                    console.error(`Ghost ${ghost.name} has invalid x at start of moveGhosts: ${ghost.x}. Resetting.`);
+                    console.error(`Ghost ${ghost.name} has invalid x: ${ghost.x}. Resetting.`);
                     const startPos = currentGhostHouseConfig[`${ghost.name}Start`];
                     ghost.x = startPos.col * TILE_SIZE + TILE_SIZE / 2;
                 }
                 if (typeof ghost.y !== 'number' || isNaN(ghost.y)) {
-                    console.error(`Ghost ${ghost.name} has invalid y at start of moveGhosts: ${ghost.y}. Resetting.`);
+                    console.error(`Ghost ${ghost.name} has invalid y: ${ghost.y}. Resetting.`);
                     const startPos = currentGhostHouseConfig[`${ghost.name}Start`];
                     ghost.y = startPos.row * TILE_SIZE + TILE_SIZE / 2;
                 }
 
-                let currentGhostSpeed; // Declared here to ensure scope
-
+                let currentGhostSpeed; 
                 const currentTile = getTileAtPixel(ghost.x, ghost.y);
 
                 if (ghost.eaten) {
-                    currentGhostSpeed = ghost.speedChase * 1.5; // Make eaten ghosts faster
+                    currentGhostSpeed = ghost.speedChase * 1.5; 
                     const targetX = currentGhostHouseConfig.returnPoint.col * TILE_SIZE + TILE_SIZE / 2;
                     const targetY = currentGhostHouseConfig.returnPoint.row * TILE_SIZE + TILE_SIZE / 2;
                     
@@ -1548,19 +1244,18 @@
                     if (distanceToReturnPoint < currentGhostSpeed) {
                         ghost.x = targetX;
                         ghost.y = targetY;
-                        ghost.eaten = false; // Reset once home
+                        ghost.eaten = false; 
                         ghost.frightened = false;
-                        ghost.state = 'inHouse'; // Return to inHouse state
+                        ghost.state = 'inHouse'; 
                         ghost.dx = 0;
                         ghost.dy = 0;
-                        return; // Ghost has reached home, stop processing its movement for this frame
+                        return; 
                     } else {
                         const angle = Math.atan2(targetY - ghost.y, targetX - ghost.x);
                         ghost.dx = Math.cos(angle);
                         ghost.dy = Math.sin(angle);
                     }
-                } else { // Not eaten
-                    // State machine for ghost house exit
+                } else { 
                     if (ghost.state === 'inHouse') {
                         currentGhostSpeed = ghost.speedTunnel;
                         const targetX = currentGhostHouseConfig.exitPoint.col * TILE_SIZE + TILE_SIZE / 2;
@@ -1570,7 +1265,7 @@
                         if (distanceToExit < currentGhostSpeed) {
                             ghost.x = targetX;
                             ghost.y = targetY;
-                            ghost.state = 'exiting'; // Transition to exiting
+                            ghost.state = 'exiting'; 
                         } else {
                             const angle = Math.atan2(targetY - ghost.y, targetX - ghost.x);
                             ghost.dx = Math.cos(angle);
@@ -1578,9 +1273,8 @@
                         }
                     } else if (ghost.state === 'exiting') {
                         currentGhostSpeed = ghost.speedTunnel;
-                        const doorTile = currentGhostHouseConfig.doorTiles[0]; // Use the first door tile as target
-                        // NEW FIX: The exit path is now a two-tile journey
-                        const exitPathTargetRow = doorTile.row - 1; // Tile above the door
+                        const doorTile = currentGhostHouseConfig.doorTiles[0]; 
+                        const exitPathTargetRow = doorTile.row - 1; 
                         const exitPathTargetCol = doorTile.col;
                         const targetX = exitPathTargetCol * TILE_SIZE + TILE_SIZE / 2;
                         const targetY = exitPathTargetRow * TILE_SIZE + TILE_SIZE / 2;
@@ -1588,7 +1282,6 @@
                         const distanceToDoorExit = Math.sqrt(Math.pow(targetX - ghost.x, 2) + Math.pow(targetY - ghost.y, 2));
                         
                         if (distanceToDoorExit < currentGhostSpeed) {
-                             // Snap to the exit tile and change to active state
                             ghost.x = targetX;
                             ghost.y = targetY;
                             ghost.dx = 0;
@@ -1599,7 +1292,7 @@
                             ghost.dx = Math.cos(angle);
                             ghost.dy = Math.sin(angle);
                         }
-                    } else { // ghost.state === 'active'
+                    } else { 
                         if (ghost.frightened) {
                             currentGhostSpeed = ghost.speedFrightened;
                         } else {
@@ -1610,59 +1303,44 @@
                                 currentGhostSpeed = ghost.speedChase;
                             }
                         }
-                        // NEW FIX: Recalculate direction if current direction is blocked
                         const isCurrentDirectionBlocked = checkWallCollision(ghost.x, ghost.y, ghost.dx * currentGhostSpeed, ghost.dy * currentGhostSpeed, GHOST_RADIUS);
                         const atIntersection = Math.abs(ghost.x - getTileCenter(currentTile.row, currentTile.col).x) < 2 && Math.abs(ghost.y - getTileCenter(currentTile.row, currentTile.col).y) < 2;
 
                         if (isCurrentDirectionBlocked || atIntersection) {
-                            const possibleMoves = [];
-                            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}]; // Order: Up, Down, Left, Right
+                            let possibleMoves = [];
+                            const directions = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}]; 
 
                             for (const dir of directions) {
-                                const nextGhostX = ghost.x + dir.dx * currentGhostSpeed;
-                                const nextGhostY = ghost.y + dir.dy * currentGhostSpeed;
-                                const nextTile = getTileAtPixel(nextGhostX, nextGhostY);
+                                const nextTile = getTileAtPixel(ghost.x + dir.dx * TILE_SIZE, ghost.y + dir.dy * TILE_SIZE);
 
-                                // Ghosts cannot enter ghost door from outside, but can exit
-                                const isNextTileDoor = (nextTile && nextTile.value === 7);
-                                const isCurrentTileInsideGhostHouse = (currentTile && (currentTile.value === 4 || currentTile.value === 5));
-
-                                if (isNextTileDoor && !isCurrentTileInsideGhostHouse) {
-                                    continue; // Cannot enter ghost house through door from outside
-                                }
-                                
-                                if (!nextTile || nextTile.value === 1) { // Solid wall
+                                if (nextTile && nextTile.value === 7 && ghost.state === 'active') {
                                     continue;
                                 }
 
-                                // Prevent immediate reversal unless it's the only option
-                                if (dir.dx === -ghost.dx && dir.dy === -ghost.dy && possibleMoves.length > 0) {
-                                    continue;
+                                if (!checkWallCollision(ghost.x, ghost.y, dir.dx * currentGhostSpeed, dir.dy * currentGhostSpeed, GHOST_RADIUS)) {
+                                    possibleMoves.push(dir);
                                 }
-                                possibleMoves.push(dir);
                             }
-                            // Ghost AI (chase, scatter, or random for frightened)
-                            if (ghost.frightened) {
-                                if (possibleMoves.length > 0) {
+
+                            if (possibleMoves.length > 1) {
+                                possibleMoves = possibleMoves.filter(move => move.dx !== -ghost.dx || move.dy !== -ghost.dy);
+                            }
+                            
+                            if (possibleMoves.length > 0) {
+                                if (ghost.frightened) {
                                     const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
                                     ghost.dx = chosenMove.dx;
                                     ghost.dy = chosenMove.dy;
-                                } else { // Fallback if somehow stuck
-                                    ghost.dx *= -1;
-                                    ghost.dy *= -1;
-                                }
-                            } else { // Normal chase AI
-                                const targetX = pacman.x;
-                                const targetY = pacman.y;
-
-                                if (possibleMoves.length > 0) {
+                                } else { 
+                                    const targetX = pacman.x;
+                                    const targetY = pacman.y;
                                     let bestMove = possibleMoves[0];
                                     let minDistance = Infinity;
 
                                     for (const move of possibleMoves) {
                                         const nextGhostX = ghost.x + move.dx * currentGhostSpeed;
                                         const nextGhostY = ghost.y + move.dy * currentGhostSpeed;
-                                        const distance = Math.sqrt(Math.pow(targetX - nextGhostX, 2) + Math.pow(targetY - nextGhostY, 2)); // Corrected distance calculation
+                                        const distance = Math.sqrt(Math.pow(targetX - nextGhostX, 2) + Math.pow(targetY - nextGhostY, 2)); 
                                         if (distance < minDistance) {
                                             minDistance = distance;
                                             bestMove = move;
@@ -1670,34 +1348,20 @@
                                     }
                                     ghost.dx = bestMove.dx;
                                     ghost.dy = bestMove.dy;
-                                } else {
-                                    // If no valid moves (e.g., trapped or only reverse is valid after filtering)
-                                    const reverseDx = -ghost.dx;
-                                    const reverseDy = -ghost.dy;
-                                    const reverseNextTile = getTileAtPixel(ghost.x + reverseDx * currentGhostSpeed, ghost.y + reverseDy * currentGhostSpeed);
-                                    if (reverseNextTile && reverseNextTile.value !== 1 && reverseNextTile.value !== 7) {
-                                        ghost.dx = reverseDx;
-                                        ghost.dy = reverseDy;
-                                    } else {
-                                        ghost.dx = 0;
-                                        ghost.dy = 0;
-                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Apply movement
                 ghost.x += ghost.dx * currentGhostSpeed;
                 ghost.y += ghost.dy * currentGhostSpeed;
 
-                // Handle warp tunnels (same logic as Pac-Man)
                 const mazeCols = getMazeDimensions().cols;
                 if (ghost.x < TILE_SIZE / 2 && ghost.dx < 0) {
-                    ghost.x = (mazeCols - 0.5) * TILE_SIZE; // Teleport to opposite side
+                    ghost.x = (mazeCols - 0.5) * TILE_SIZE; 
                 } else if (ghost.x > canvas.width - TILE_SIZE / 2 && ghost.dx > 0) {
-                    ghost.x = 0.5 * TILE_SIZE; // Teleport to opposite side
+                    ghost.x = 0.5 * TILE_SIZE; 
                 }
             });
         }
@@ -1710,18 +1374,16 @@
 
                 if (distance < PACMAN_RADIUS + GHOST_RADIUS) {
                     if (ghost.frightened && !ghost.eaten) {
-                        // Pac-Man eats ghost
                         ghost.eaten = true;
-                        score += 200; // Standard score for eating a ghost
-                        ghost.frightened = false; // Ghost is no longer frightened
+                        score += 200; 
+                        ghost.frightened = false; 
                     } else if (!ghost.eaten) {
-                        // Ghost eats Pac-Man
                         lives--;
                         if (lives <= 0) {
                             gameOver = true;
-                            gameState = 'game_over'; // Update game state
+                            gameState = 'game_over'; 
                         }
-                        resetPositions(); // Reset Pac-Man and ghosts
+                        resetPositions(); 
                         updateUI();
                     }
                 }
@@ -1729,40 +1391,33 @@
         }
 
         function resetPositions() {
-            // Get current level's progression data for reset
             const currentLevelData = LEVEL_PROGRESSION_DATA[level];
             const currentCharacterConfig = CHARACTER_CONFIGS[currentLevelData.characterType];
             const currentDifficultyTier = DIFFICULTY_TIERS[currentLevelData.difficultyTierIndex];
             const currentGhostHouseConfig = GHOST_HOUSE_CONFIGS[currentLevelData.mazeIndex];
 
-
-            // Reset Pac-Man to start
-            for (let r = 0; r < MAZES[currentLevelData.mazeIndex].length; r++) {
-                for (let c = 0; c < MAZES[currentLevelData.mazeIndex][r].length; c++) {
-                    if (MAZES[currentLevelData.mazeIndex][r][c] === 6) {
-                        pacman.x = c * TILE_SIZE + TILE_SIZE / 2;
-                        pacman.y = r * TILE_SIZE + TILE_SIZE / 2;
-                        pacman.dx = 0;
-                        pacman.dy = 0;
-                        pacman.nextDx = 0;
-                        pacman.nextDy = 0;
-                        // Re-apply character-specific properties on reset
-                        pacman.mouthState = currentCharacterConfig.initialMouthState;
-                        pacman.currentMouthFrameIndex = 0;
-                        pacman.mouthAnimationFrames = currentCharacterConfig.mouthAnimationFrames;
-                        pacman.chompInterval = currentCharacterConfig.chompInterval;
-                        pacman.color = currentCharacterConfig.color;
-                        pacman.deathAnimationType = currentCharacterConfig.deathAnimationType;
-
-                        // Re-apply level-specific speeds on reset
-                        pacman.speedNormal = currentDifficultyTier.pacmanNormal;
-                        pacman.speedFrightened = currentDifficultyTier.pacmanFrightened;
-                        break;
-                    }
+            const mazeStringArray = MAZE_DATA_STRINGS[currentLevelData.mazeIndex];
+            for (let r = 0; r < mazeStringArray.length; r++) {
+                const c = mazeStringArray[r].indexOf('@');
+                if (c !== -1) {
+                    pacman.x = c * TILE_SIZE + TILE_SIZE / 2;
+                    pacman.y = r * TILE_SIZE + TILE_SIZE / 2;
+                    pacman.dx = 0;
+                    pacman.dy = 0;
+                    pacman.nextDx = 0;
+                    pacman.nextDy = 0;
+                    pacman.mouthState = currentCharacterConfig.initialMouthState;
+                    pacman.currentMouthFrameIndex = 0;
+                    pacman.mouthAnimationFrames = currentCharacterConfig.mouthAnimationFrames;
+                    pacman.chompInterval = currentCharacterConfig.chompInterval;
+                    pacman.color = currentCharacterConfig.color;
+                    pacman.deathAnimationType = currentCharacterConfig.deathAnimationType;
+                    pacman.speedNormal = currentDifficultyTier.pacmanNormal;
+                    pacman.speedFrightened = currentDifficultyTier.pacmanFrightened;
+                    break;
                 }
             }
 
-            // Reset ghosts to home positions and unfrighten them
             ghosts.forEach(ghost => {
                 const startPos = currentGhostHouseConfig[`${ghost.name}Start`];
                 ghost.x = startPos.col * TILE_SIZE + TILE_SIZE / 2;
@@ -1771,10 +1426,10 @@
                 ghost.dy = 0;
                 ghost.frightened = false;
                 ghost.eaten = false;
-                ghost.state = (ghost.name === 'blinky') ? 'active' : 'inHouse'; // Correctly reset Blinky to active
+                ghost.state = (ghost.name === 'blinky') ? 'active' : 'inHouse'; 
                 if (ghost.name === 'blinky') {
-                    // Give Blinky an initial direction away from the house
-                    ghost.dy = -1;
+                    ghost.dx = -1;
+                    ghost.dy = 0;
                 }
                 ghost.speedChase = currentDifficultyTier.ghostChase;
                 ghost.speedFrightened = currentDifficultyTier.ghostFrightened;
@@ -1782,25 +1437,22 @@
             });
             frightenedMode = false;
             frightenedTimer = 0;
-            lastFrameTime = null; // Crucial: Reset lastFrameTime when positions are reset (e.g., losing a life)
+            lastFrameTime = null; 
         }
 
         // --- Pause Menu Functions ---
         function togglePause() {
-            // Only allow pausing if the game is in 'playing' or 'ready_prompt' state
             if (gameState === 'playing' || gameState === 'ready_prompt') {
                 paused = !paused;
                 if (paused) {
                     showPauseMenu();
                 } else {
                     hidePauseMenu();
-                    lastFrameTime = null; // Reset lastFrameTime to prevent large deltaTime after unpausing
-                    // If game was in ready_prompt, restart its timer
+                    lastFrameTime = null; 
                     if (gameState === 'ready_prompt') {
                         readyPromptTimer = READY_PROMPT_DURATION;
                     }
-                    // Request next frame to resume game loop
-                    if (!animationFrameId) { // Only request if not already running
+                    if (!animationFrameId) { 
                         animationFrameId = requestAnimationFrame(gameLoop);
                     }
                 }
@@ -1809,7 +1461,6 @@
 
         function showPauseMenu() {
             document.getElementById('pauseMenuOverlay').style.display = 'flex';
-            // Ensure the checkbox state matches the variable when opening the menu
             document.getElementById('showGhostHouseToggle').checked = showGhostHouseDebug;
         }
 
@@ -1818,25 +1469,21 @@
         }
 
         function returnToStartMenu() {
-            paused = false; // Ensure game is unpaused
-            hidePauseMenu(); // Hide pause menu
+            paused = false; 
+            hidePauseMenu(); 
 
-            // Hide game elements
             canvas.style.display = 'none';
             document.querySelector('.game-info').style.display = 'none';
             document.getElementById('gameStatus').style.display = 'none';
-            document.getElementById('buildModeControls').style.display = 'none'; // Hide build mode controls
+            document.getElementById('buildModeControls').style.display = 'none'; 
 
-            // Show level select
             document.getElementById('levelSelectOverlay').style.display = 'flex';
 
-            // Stop the game loop
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
             }
 
-            // Reset game state variables
             score = 0;
             lives = 3;
             level = 0;
@@ -1847,53 +1494,43 @@
             mouthAnimationTimer = 0;
             powerPelletFlashTimer = 0;
             powerPelletFlashState = true;
-            lastFrameTime = null; // Important: Reset lastFrameTime for a clean start
-            showGhostHouseDebug = false; // Reset debug toggle on returning to start menu
-            document.getElementById('showGhostHouseToggle').checked = false; // Uncheck the box
-            isBuildModeActive = false; // Reset build mode toggle
-            document.getElementById('buildModeToggle').checked = false; // Uncheck the build mode box
+            lastFrameTime = null; 
+            showGhostHouseDebug = false; 
+            document.getElementById('showGhostHouseToggle').checked = false; 
+            isBuildModeActive = false; 
+            document.getElementById('buildModeToggle').checked = false; 
 
-            // Set game state to level_select
             gameState = 'level_select';
-
-            // No need to call resetLevel here, as startGame will handle it when a level is selected again.
         }
 
 
         // --- Game Loop ---
         function gameLoop(timestamp) {
-            // If this is the very first frame, just set lastFrameTime and return to avoid large deltaTime
             if (lastFrameTime === null) {
                 lastFrameTime = timestamp;
                 animationFrameId = requestAnimationFrame(gameLoop);
                 return;
             }
             
-            const deltaTime = timestamp - lastFrameTime; // Calculate deltaTime
-            lastFrameTime = timestamp; // Update lastFrameTime for the *next* frame's calculation
+            const deltaTime = timestamp - lastFrameTime; 
+            lastFrameTime = timestamp; 
 
-            // State Machine for Game Flow
             if (gameState === 'level_select') {
                 animationFrameId = requestAnimationFrame(gameLoop);
                 return; 
             }
 
-            // Always draw the game state first, regardless of pause state, so it's visible behind overlays
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Removed purple diagnostic square
-            
             drawMaze();
-            updateUI(); // Update UI even if paused to reflect current score/lives
+            updateUI(); 
 
             if (gameState === 'build_mode') {
-                // Update build cursor flashing
                 buildCursor.flashTimer += deltaTime;
                 if (buildCursor.flashTimer >= CURSOR_FLASH_INTERVAL) {
                     buildCursor.flashState = !buildCursor.flashState;
                     buildCursor.flashTimer = 0;
                 }
-                // Update feedback timer
                 if (buildCursor.feedbackActive) {
                     buildCursor.feedbackTimer += deltaTime;
                     if (buildCursor.feedbackTimer >= CURSOR_FEEDBACK_DURATION) {
@@ -1902,14 +1539,12 @@
                     }
                 }
                 drawBuildCursor();
-                // Skip all game logic
                 animationFrameId = requestAnimationFrame(gameLoop);
                 return;
             }
 
-            // If paused, just show pause menu and request next frame, without updating game logic
             if (paused) {
-                showPauseMenu(); // Ensure pause menu is visible
+                showPauseMenu(); 
                 animationFrameId = requestAnimationFrame(gameLoop);
                 return;
             }
@@ -1917,7 +1552,6 @@
             if (gameState === 'ready_prompt') {
                 readyPromptTimer -= deltaTime;
 
-                // Draw "READY!" text
                 ctx.fillStyle = 'white';
                 ctx.font = `${TILE_SIZE * 1.5}px 'Inter', sans-serif`;
                 ctx.textAlign = 'center';
@@ -1926,51 +1560,42 @@
 
                 if (readyPromptTimer <= 0) {
                     gameState = 'playing';
-                    // No need to clear canvas here, it's cleared at the start of the next frame
                 }
-                animationFrameId = requestAnimationFrame(gameLoop); // Request next frame
+                animationFrameId = requestAnimationFrame(gameLoop); 
                 return;
             }
 
             if (gameState === 'game_over' || gameState === 'game_win') {
-                // UI is updated at the start of the loop
-                // Stop the animation loop
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
                 return;
             }
 
-            // Only run game logic if in 'playing' state
             if (gameState === 'playing') {
-                // Update game state
                 movePacman();
                 eatDots();
-moveGhosts();
+                moveGhosts();
                 checkGhostCollisions();
 
-                // Pac-Man mouth animation: Cycle through states if moving
                 if (pacman.dx !== 0 || pacman.dy !== 0) {
                     mouthAnimationTimer += deltaTime;
-                    if (mouthAnimationTimer >= pacman.chompInterval) { // Use pacman's specific chomp interval
+                    if (mouthAnimationTimer >= pacman.chompInterval) { 
                         pacman.currentMouthFrameIndex = (pacman.currentMouthFrameIndex + 1) % pacman.mouthAnimationFrames.length;
                         pacman.mouthState = pacman.mouthAnimationFrames[pacman.currentMouthFrameIndex];
                         mouthAnimationTimer = 0;
                     }
                 } else {
-                    // If Pac-Man is stationary, mouth should be in its initial state (e.g., closed for Pac-Man, open for Ms. Pac-Man)
-                    pacman.mouthState = pacman.mouthAnimationFrames[0]; // Set to the first frame of its animation sequence
+                    pacman.mouthState = pacman.mouthAnimationFrames[0]; 
                     pacman.currentMouthFrameIndex = 0;
                     mouthAnimationTimer = 0;
                 }
 
-                // Power Pellet flashing update
                 powerPelletFlashTimer += deltaTime;
                 if (powerPelletFlashTimer >= POWER_PELLET_FLASH_INTERVAL) {
                     powerPelletFlashState = !powerPelletFlashState;
                     powerPelletFlashTimer = 0;
                 }
 
-                // Frightened mode timer
                 if (frightenedMode) {
                     frightenedTimer -= deltaTime;
                     if (frightenedTimer <= 0) {
@@ -1979,11 +1604,10 @@ moveGhosts();
                     }
                 }
             }
-            // Draw characters after maze and game logic
             drawPacman();
             ghosts.forEach(drawGhost);
 
-            animationFrameId = requestAnimationFrame(gameLoop); // Request next frame
+            animationFrameId = requestAnimationFrame(gameLoop); 
         }
 
         // --- Event Listeners ---
@@ -2010,25 +1634,22 @@ moveGhosts();
                         if (buildCursor.col < cols - 1) { buildCursor.col++; moved = true; }
                         break;
                     case 'Shift':
-                    case 'ShiftLeft': // Specific key for Left Shift
-                        // Toggle tile type
+                    case 'ShiftLeft': 
                         const currentRow = buildCursor.row;
                         const currentCol = buildCursor.col;
                         const currentTileValue = currentMaze[currentRow][currentCol];
                         
                         let currentIndex = BUILD_TILE_TYPES.indexOf(currentTileValue);
-                        if (currentIndex === -1) { // If current tile is not in our cycle
-                            currentIndex = 0; // Default to path
+                        if (currentIndex === -1) { 
+                            currentIndex = 0; 
                         } else {
                             currentIndex = (currentIndex + 1) % BUILD_TILE_TYPES.length;
                         }
                         const newTileValue = BUILD_TILE_TYPES[currentIndex];
 
-                        // Handle single Pac-Man spawn rule
                         if (newTileValue === 6) {
                             let oldPacmanRow = -1;
                             let oldPacmanCol = -1;
-                            // Find existing Pac-Man spawn
                             for (let r = 0; r < currentMaze.length; r++) {
                                 for (let c = 0; c < currentMaze[r].length; c++) {
                                     if (currentMaze[r][c] === 6) {
@@ -2040,27 +1661,23 @@ moveGhosts();
                                 if (oldPacmanRow !== -1) break;
                             }
 
-                            // If an old Pac-Man spawn exists and it's not the current cursor location
                             if (oldPacmanRow !== -1 && (oldPacmanRow !== currentRow || oldPacmanCol !== currentCol)) {
-                                currentMaze[oldPacmanRow][oldPacmanCol] = 0; // Change old spawn to path
+                                currentMaze[oldPacmanRow][oldPacmanCol] = 0; 
                             }
                         }
 
                         currentMaze[currentRow][currentCol] = newTileValue;
 
-                        // Trigger visual feedback
                         buildCursor.feedbackActive = true;
                         buildCursor.feedbackTimer = 0;
 
-                        // Redraw immediately after tile change and update counters
                         ctx.clearRect(0, 0, canvas.width, canvas.height);
                         drawMaze();
                         drawBuildCursor();
-                        updateBuildModeCounters(); // Update counters after tile change
+                        updateBuildModeCounters(); 
                         break;
                 }
                 if (moved) {
-                    // Redraw immediately after cursor movement
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     drawMaze();
                     drawBuildCursor();
@@ -2083,7 +1700,7 @@ moveGhosts();
                         pacman.nextDx = 1;
                         pacman.nextDy = 0;
                         break;
-                    case 'p': // New: Pause/Unpause
+                    case 'p': 
                     case 'P':
                         togglePause();
                         break;
@@ -2091,16 +1708,12 @@ moveGhosts();
             }
         });
 
-        // Initialize the game when the window loads
         window.onload = initGame;
 
-        // Handle window resize to keep canvas responsive
         window.addEventListener('resize', () => {
-            // Re-calculate canvas dimensions based on current maze
             const { rows, cols } = getMazeDimensions();
             canvas.width = cols * TILE_SIZE;
             canvas.height = rows * TILE_SIZE;
-            // Redraw the maze and characters
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawMaze();
             if (gameState === 'build_mode') {
