@@ -813,165 +813,164 @@
         }
 
         // --- Drawing Functions ---
-/**
- * Draws the maze walls on the canvas with a hollow, rounded, contiguous style.
- * This function implements the required two-phase drawing process.
- *
- * It relies on access to the following global variables:
- * - ctx: The 2D canvas rendering context.
- * - currentMaze: A 2D array where `1` represents a wall and any other value is an open path.
- * - TILE_SIZE: The pixel dimension (width and height) of a single maze tile.
- * - wallColor: The CSS color string to use for the walls.
- */
-function drawMaze() {
-    /**
-     * Helper function to check if a tile at given coordinates is a wall.
-     * Treats any coordinates outside the maze boundaries as non-walls (open space).
-     * @param {number} r - The row index.
-     * @param {number} c - The column index.
-     * @returns {boolean} - True if the tile is a wall, false otherwise.
-     */
-    const isWall = (r, c) => {
-        return r >= 0 && r < currentMaze.length &&
-               c >= 0 && c < currentMaze[0].length &&
-               currentMaze[r][c] === 1;
-    };
+        /**
+         * Draws the maze walls on the canvas with a hollow, rounded style.
+         * This function relies on the following global variables:
+         * - ctx: The 2D canvas rendering context.
+         * - currentMaze: A 2D array where 1 represents a wall.
+         * - TILE_SIZE: The pixel dimension of a single grid tile.
+         * - wallColor: The color to use for the walls.
+         */
+        function drawMaze() {
+            const { rows, cols } = getMazeDimensions();
+            const currentLevelData = LEVEL_PROGRESSION_DATA[level];
+            const wallColor = MAZE_WALL_COLORS[currentLevelData.mazeIndex % MAZE_WALL_COLORS.length];
+            
+            // First, draw all non-wall tiles (paths, dots, etc.)
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const tile = currentMaze[r][c];
+                    const x = c * TILE_SIZE;
+                    const y = r * TILE_SIZE;
 
-    const inset = TILE_SIZE * 0.25;
-    const radius = inset; // The radius for rounded corners is the same as the inset.
-
-    // =========================================================================
-    // ## Phase 1: Draw Solid, Inset Wall Segments
-    // This phase creates the base shape of the walls. It draws a solid rectangle
-    // for each wall tile, but "retreats" any edge that borders an open path.
-    // This technique merges adjacent wall tiles into a single, blocky shape.
-    // =========================================================================
-    ctx.fillStyle = wallColor;
-    ctx.beginPath(); // Using a single path for all rectangles is more performant.
-
-    for (let r = 0; r < currentMaze.length; r++) {
-        for (let c = 0; c < currentMaze[0].length; c++) {
-            if (!isWall(r, c)) {
-                continue; // Skip any tile that isn't a wall.
-            }
-
-            // Start with the tile's full dimensions.
-            let x = c * TILE_SIZE;
-            let y = r * TILE_SIZE;
-            let w = TILE_SIZE;
-            let h = TILE_SIZE;
-
-            // Adjust dimensions based on neighbors. If a side borders open space,
-            // it gets inset.
-            if (!isWall(r - 1, c)) { // Border with open space above.
-                y += inset;
-                h -= inset;
-            }
-            if (!isWall(r + 1, c)) { // Border with open space below.
-                h -= inset;
-            }
-            if (!isWall(r, c - 1)) { // Border with open space to the left.
-                x += inset;
-                w -= inset;
-            }
-            if (!isWall(r, c + 1)) { // Border with open space to the right.
-                w -= inset;
-            }
-
-            // Add the calculated rectangle to the path.
-            ctx.rect(x, y, w, h);
-        }
-    }
-    ctx.fill(); // Draw all collected rectangles in a single operation.
-
-    // =========================================================================
-    // ## Phase 2: Carve and Add Rounded Corners
-    // This phase iterates again to smooth the blocky shape from Phase 1. It adds
-    // filled circles to create rounded outer corners and uses the background
-    // color to "carve out" rounded inner corners.
-    // =========================================================================
-
-    // ### Part A: Add Rounded Outer Corners
-    ctx.fillStyle = wallColor;
-    for (let r = 0; r < currentMaze.length; r++) {
-        for (let c = 0; c < currentMaze[0].length; c++) {
-            if (!isWall(r, c)) {
-                continue;
-            }
-
-            // An outer corner exists where a wall tile has two adjacent non-wall neighbors.
-            // We draw a circle in the wall color to round these corners.
-
-            // Top-left outer corner
-            if (!isWall(r - 1, c) && !isWall(r, c - 1)) {
-                ctx.beginPath();
-                ctx.arc(c * TILE_SIZE + inset, r * TILE_SIZE + inset, radius, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-            // Top-right outer corner
-            if (!isWall(r - 1, c) && !isWall(r, c + 1)) {
-                ctx.beginPath();
-                ctx.arc(c * TILE_SIZE + TILE_SIZE - inset, r * TILE_SIZE + inset, radius, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-            // Bottom-left outer corner
-            if (!isWall(r + 1, c) && !isWall(r, c - 1)) {
-                ctx.beginPath();
-                ctx.arc(c * TILE_SIZE + inset, r * TILE_SIZE + TILE_SIZE - inset, radius, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-            // Bottom-right outer corner
-            if (!isWall(r + 1, c) && !isWall(r, c + 1)) {
-                ctx.beginPath();
-                ctx.arc(c * TILE_SIZE + TILE_SIZE - inset, r * TILE_SIZE + TILE_SIZE - inset, radius, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-        }
-    }
-
-    // ### Part B: Carve Out Rounded Inner Corners
-    ctx.fillStyle = '#000000'; // Use black (or background color) to "erase".
-    
-    // An inner corner occurs at an intersection surrounded by three walls and one open path.
-    // We check each 2x2 block of tiles to find these locations.
-    for (let r = 0; r < currentMaze.length - 1; r++) {
-        for (let c = 0; c < currentMaze[0].length - 1; c++) {
-            const wall_NW = isWall(r, c);
-            const wall_NE = isWall(r, c + 1);
-            const wall_SW = isWall(r + 1, c);
-            const wall_SE = isWall(r + 1, c + 1);
-
-            const wallCount = wall_NW + wall_NE + wall_SW + wall_SE;
-
-            if (wallCount === 3) {
-                // This is an inner corner. Find the center for the carving circle.
-                const cornerX = (c + 1) * TILE_SIZE;
-                const cornerY = (r + 1) * TILE_SIZE;
-                let carveX, carveY;
-
-                // The carving circle's center depends on which of the four tiles is the open one.
-                if (!wall_NW) { // Inner corner points toward the Top-Left
-                    carveX = cornerX - inset;
-                    carveY = cornerY - inset;
-                } else if (!wall_NE) { // Inner corner points toward the Top-Right
-                    carveX = cornerX + inset;
-                    carveY = cornerY - inset;
-                } else if (!wall_SW) { // Inner corner points toward the Bottom-Left
-                    carveX = cornerX - inset;
-                    carveY = cornerY + inset;
-                } else { // !wall_SE, inner corner points toward the Bottom-Right
-                    carveX = cornerX + inset;
-                    carveY = cornerY + inset;
+                    if (tile !== 1) { // If it's NOT a wall
+                        if (tile === 2) { // Dot
+                            ctx.fillStyle = DOT_COLOR;
+                            ctx.beginPath();
+                            ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, DOT_RADIUS, 0, Math.PI * 2);
+                            ctx.fill();
+                        } else if (tile === 3) { // Power Pellet
+                            if (powerPelletFlashState) {
+                                ctx.fillStyle = POWER_PELLET_COLOR;
+                                ctx.beginPath();
+                                ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, POWER_PELLET_RADIUS, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        } else if (tile === 7) { // Ghost Door
+                            ctx.fillStyle = '#FFB8FF';
+                            const doorHeight = 4;
+                            ctx.fillRect(x, y + TILE_SIZE / 2 - doorHeight / 2, TILE_SIZE, doorHeight);
+                        }
+                    }
                 }
-                
-                // Draw the carving circle.
-                ctx.beginPath();
-                ctx.arc(carveX, carveY, radius, 0, 2 * Math.PI);
-                ctx.fill();
             }
-        }
-    }
-}
+
+            // --- Setup and Helper Functions ---
+
+            const inset = TILE_SIZE * 0.25;
+            const radius = inset; // The radius for all corner circles is the inset amount.
+            const mazeRows = currentMaze.length;
+            const mazeCols = currentMaze[0].length;
+            const backgroundColor = '#000000'; // Color for carving concave corners.
+
+            /**
+             * Checks if a given coordinate in the maze is a wall.
+             * Treats out-of-bounds coordinates as non-walls (open space).
+             * @param {number} row The row index to check.
+             * @param {number} col The column index to check.
+             * @returns {boolean} True if the tile is a wall, false otherwise.
+             */
+            const isWall = (row, col) => {
+                if (row < 0 || row >= mazeRows || col < 0 || col >= mazeCols) {
+                    return false;
+                }
+                return currentMaze[row][col] === 1;
+            };
+
+            /**
+             * Draws a filled circle on the canvas.
+             * @param {number} x The center x-coordinate.
+             * @param {number} y The center y-coordinate.
+             * @param {number} r The radius.
+             * @param {string} color The fill color.
+             */
+            const drawCircle = (x, y, r, color) => {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, 2 * Math.PI);
+                ctx.fill();
+            };
+
+            // --- Phase 1: Draw Solid, Inset Wall Segments ---
+
+            ctx.fillStyle = wallColor;
+            for (let row = 0; row < mazeRows; row++) {
+                for (let col = 0; col < mazeCols; col++) {
+                    if (!isWall(row, col)) {
+                        continue; // Skip non-wall tiles.
+                    }
+
+                    // Start with the full tile dimensions.
+                    let rectX = col * TILE_SIZE;
+                    let rectY = row * TILE_SIZE;
+                    let rectW = TILE_SIZE;
+                    let rectH = TILE_SIZE;
+
+                    // "Retreat" sides that border an open path.
+                    if (!isWall(row - 1, col)) { // Neighbor above is open.
+                        rectY += inset;
+                        rectH -= inset;
+                    }
+                    if (!isWall(row + 1, col)) { // Neighbor below is open.
+                        rectH -= inset;
+                    }
+                    if (!isWall(row, col - 1)) { // Neighbor left is open.
+                        rectX += inset;
+                        rectW -= inset;
+                    }
+                    if (!isWall(row, col + 1)) { // Neighbor right is open.
+                        rectW -= inset;
+                    }
+
+                    // Draw the solid segment. This creates a contiguous, blocky wall shape.
+                    if (rectW > 0 && rectH > 0) {
+                        ctx.fillRect(rectX, rectY, rectW, rectH);
+                    }
+                }
+            }
+
+            // --- Phase 2: Carve and Add Rounded Corners ---
+
+            for (let row = 0; row < mazeRows; row++) {
+                for (let col = 0; col < mazeCols; col++) {
+                    if (!isWall(row, col)) {
+                        continue; // Corner logic only applies to wall tiles.
+                    }
+
+                    const tileX = col * TILE_SIZE;
+                    const tileY = row * TILE_SIZE;
+
+                    // Part A: Add rounded OUTSIDE corners in the wall's color.
+                    // These corners occur where a wall tile has two adjacent open neighbors.
+                    if (!isWall(row - 1, col) && !isWall(row, col - 1)) { // Top-left
+                        drawCircle(tileX + inset, tileY + inset, radius, wallColor);
+                    }
+                    if (!isWall(row - 1, col) && !isWall(row, col + 1)) { // Top-right
+                        drawCircle(tileX + TILE_SIZE - inset, tileY + inset, radius, wallColor);
+                    }
+                    if (!isWall(row + 1, col) && !isWall(row, col - 1)) { // Bottom-left
+                        drawCircle(tileX + inset, tileY + TILE_SIZE - inset, radius, wallColor);
+                    }
+                    if (!isWall(row + 1, col) && !isWall(row, col + 1)) { // Bottom-right
+                        drawCircle(tileX + TILE_SIZE - inset, tileY + TILE_SIZE - inset, radius, wallColor);
+                    }
+
+                    // Part B: Carve out rounded INSIDE corners in the background color.
+                    // These corners occur where three wall tiles surround an open tile.
+                    if (isWall(row, col + 1) && isWall(row + 1, col) && !isWall(row + 1, col + 1)) { // Concave corner pointing down-right
+                        drawCircle(tileX + TILE_SIZE - inset, tileY + TILE_SIZE - inset, radius, backgroundColor);
+                    }
+                    if (isWall(row, col - 1) && isWall(row + 1, col) && !isWall(row + 1, col - 1)) { // Concave corner pointing down-left
+                        drawCircle(tileX + inset, tileY + TILE_SIZE - inset, radius, backgroundColor);
+                    }
+                    if (isWall(row, col + 1) && isWall(row - 1, col) && !isWall(row - 1, col + 1)) { // Concave corner pointing up-right
+                        drawCircle(tileX + TILE_SIZE - inset, tileY + inset, radius, backgroundColor);
+                    }
+                    if (isWall(row, col - 1) && isWall(row - 1, col) && !isWall(row - 1, col - 1)) { // Concave corner pointing up-left
+                        drawCircle(tileX + inset, tileY + inset, radius, backgroundColor);
+                    }
+                }
+            }
 
             // Diagnostic square
             ctx.fillStyle = 'purple';
